@@ -96,6 +96,9 @@ m_SkillTree(new cSkillTree)
 	m_dweFamilyRewardExp = 0;
 	m_byCurFamilyMemCnt	 = 0;
 	m_dwCurrentResurrectIndex = 0;
+	// skr -- relife
+ 	IsRelifeON = FALSE;
+	RelifeTimer = 0;
 }
 
 CPlayer::~CPlayer()
