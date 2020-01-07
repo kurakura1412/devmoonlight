@@ -1041,5 +1041,8 @@ public:
 	void		SetForbidChatTime( __time64_t time ) { ForbidChatTime = time; }
 	__time64_t	GetForbidChatTime() const { return ForbidChatTime; }
 	BOOL		IsForbidChat() const;
-
+// skr -- relife
+private:
+	BOOL	IsRelifeON;
+	DWORD	RelifeTimer;
 };
