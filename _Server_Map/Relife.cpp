@@ -1,7 +1,11 @@
+// ReLife feature that allow player invincible for period of time after revival.
+// enable them to counter enemies attacks.
 
 #include <vector>
 #include "MHFile.h"
 #include "..\[CC]Header\GameResourceManager.h"
+#include "../[CC]Skill/Server/Info/BuffSkillInfo.h"
+#include "../[CC]Skill/Server/Manager/SkillManager.h"
 #include "Relife.h"
 
 CRelife::CRelife()
@@ -9,6 +13,7 @@ CRelife::CRelife()
 	dwmapnum = 0;
   relife_time_count = 0;
 	relife_mode = TRUE; // default yes
+  relife_icon =  FALSE; //
 }
 CRelife::~CRelife()
 {}
@@ -65,6 +70,15 @@ void CRelife::LoadSetup()
 			stuff.dwEnd = alloskillE;
 			Allowed_skill_range.push_back(stuff);
 		}
+    else if(0==strcmp(string, "#RELIFE_BUFF_ID"))
+		{
+      DWORD sklidx = file.GetDword();
+      cBuffSkillInfo* sklbuff = SKILLMGR->GetBuffInfo(sklidx);
+      if( sklbuff ){
+        sklbuff->SetDelay( relife_timeup );
+        relife_icon = TRUE;
+      }
+    }
 	}
 	file.Release();
 }
@@ -109,4 +123,16 @@ BOOL CRelife::isAllowSkill(DWORD skillnum)
 void CRelife::setmapnum( WORD anum )
 {
 	dwmapnum = (DWORD)anum;
+}
+void CRelife::Init()
+{
+}
+CRelife* CRelife::GetInstance()
+{
+  static CRelife instance;
+	return &instance;
+}
+BOOL CRelife::isRelifeIcon()
+{
+  return relife_icon;
 }

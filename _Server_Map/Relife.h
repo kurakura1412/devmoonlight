@@ -2,6 +2,8 @@
 #define _RELIFE_H
 #pragma once
 
+#define RELIFEEMGR CRelife::GetInstance()
+
 struct AllSkillRange {
 	DWORD dwFirst;
 	DWORD dwEnd;
@@ -10,14 +12,18 @@ struct AllSkillRange {
 class CRelife {
 	DWORD dwmapnum;
 	BOOL relife_mode;
+  BOOL relife_icon;
 	DWORD relife_timeup;
   DWORD relife_time_count;
 public:
   CRelife();
   ~CRelife();
+  void Init();
+  static CRelife* GetInstance();
   void setmapnum( WORD anum );
   void LoadSetup();
 	BOOL isRelifeMod();
+  BOOL isRelifeIcon();
 	void reset();
   BOOL isAllowSkill( DWORD skillnum );
 private:

@@ -62,6 +62,9 @@
 #include "Dungeon\DungeonMgr.h"
 #include "..\hseos\ResidentRegist\SHResidentRegistManager.h"
 
+// --- skr 12/01/2020
+#include "Relife.h"
+
 #define INSERTLOG_TIME			600000 // 10 min
 #define INSERTLOG_TIME_CHINA	1800000 // 30 min
 #define INSERTLOG_TIME_HK		1800000 // 30 min
@@ -97,8 +100,9 @@ m_SkillTree(new cSkillTree)
 	m_byCurFamilyMemCnt	 = 0;
 	m_dwCurrentResurrectIndex = 0;
 	// skr -- relife
- 	IsRelifeON = FALSE;
+ 	RelifeON = FALSE;
 	RelifeTimer = 0;
+  RelifeStartTime = 0;
 }
 
 CPlayer::~CPlayer()
@@ -1710,6 +1714,9 @@ void CPlayer::RevivePresentSpot()
 	ClearMurderIdx();
 
 	m_bDieForGFW = FALSE;
+// --- skr  12/01/2020
+  SetRelifeStart();
+  
 }
 
 // 080602 LYW --- Player : 경험치 수치 (__int32) 에서 (__int64) 사이즈로 변경 처리.
@@ -1834,6 +1841,9 @@ EXPTYPE CPlayer::OnResurrect()
 	ClearMurderIdx();
 
 	m_bDieForGFW = FALSE;
+// --- skr  12/01/2020
+  SetRelifeStart();
+  
 	return exp;
 }
 
@@ -1925,7 +1935,7 @@ void CPlayer::ReviveLogIn_Normal()
 	MOVE_POS msg ;
 
 	msg.Category	= MP_USERCONN ;
-	msg.Protocol	= MP_USERCONN_CHARACTER_REVIVE ;
+	msg.Protocol	= MP_USERCONN_CHARACTER_REVIVE;
 
 	msg.dwObjectID	= GetID() ;
 	msg.dwMoverID	= GetID() ;
@@ -2055,6 +2065,10 @@ void CPlayer::ReviveLogIn_Normal()
 	}
 
 	ClearMurderIdx();
+  
+// --- skr  12/01/2020
+  SetRelifeStart();
+  
 }
 
 
@@ -2079,7 +2093,7 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 	MOVE_POS msg ;
 
 	msg.Category	= MP_USERCONN ;
-	msg.Protocol	= MP_USERCONN_CHARACTER_REVIVE ;
+	msg.Protocol	= MP_USERCONN_CHARACTER_REVIVE;
 
 	msg.dwObjectID	= GetID() ;
 	msg.dwMoverID	= GetID() ;
@@ -2248,6 +2262,9 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 	}
 
 	ClearMurderIdx();
+  
+// --- skr  12/01/2020
+  SetRelifeStart();
 }
 
 
@@ -3277,6 +3294,10 @@ void CPlayer::ClearMurderIdx()
 DWORD CPlayer::Damage(CObject* pAttacker,RESULTINFO* pDamageInfo)
 {
 	DWORD life = GetLife();
+  
+// --- skr 12/01/2020
+  if( IsRelifeON() ){ return life; }
+
 	DWORD beforelife = life;
 
 	if(life > pDamageInfo->RealDamage)
@@ -5546,4 +5567,27 @@ BOOL CPlayer::IsForbidChat() const
 		return FALSE;
 
 	return TRUE;
+}
+
+// --- skr 12/01/2020
+void CPlayer::UpdateRelife()
+{
+  if( RelifeStartTime ){
+    DWORD spend = gCurTime - RelifeStartTime;
+    if( RelifeTimer  <= spend ){
+      RelifeStartTime = 0;
+      RelifeON = FALSE;
+    }
+  }
+}
+void CPlayer::SetRelifeTimer(DWORD anum)
+{
+  RelifeTimer = anum;
+}
+void CPlayer::SetRelifeStart()
+{
+  if( RELIFEEMGR->isRelifeMod() ){
+    RelifeStartTime = gCurTime;
+    RelifeON = TRUE;
+  }
 }

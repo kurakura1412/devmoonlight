@@ -1043,6 +1043,12 @@ public:
 	BOOL		IsForbidChat() const;
 // skr -- relife
 private:
-	BOOL	IsRelifeON;
+	BOOL	RelifeON;
 	DWORD	RelifeTimer;
+  DWORD	RelifeStartTime;
+public:
+  BOOL IsRelifeON() { return RelifeON;}
+  void UpdateRelife();
+  void SetRelifeTimer(DWORD anum );
+  void SetRelifeStart();
 };
