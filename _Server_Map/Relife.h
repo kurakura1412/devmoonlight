@@ -15,6 +15,7 @@ class CRelife {
   BOOL relife_icon;
 	DWORD relife_timeup;
   DWORD relife_time_count;
+  DWORD relifebuffidx;
 public:
   CRelife();
   ~CRelife();
@@ -26,9 +27,12 @@ public:
   BOOL isRelifeIcon();
 	void reset();
   BOOL isAllowSkill( DWORD skillnum );
+  BOOL isAllowBuff( DWORD buffidx );
 private:
 	std::vector<DWORD> Allowed_skill;
 	std::vector<AllSkillRange> Allowed_skill_range;
+  std::vector<DWORD> Allowed_buff;
+	std::vector<AllSkillRange> Allowed_buff_range;
 };
 
  

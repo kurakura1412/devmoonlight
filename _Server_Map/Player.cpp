@@ -5591,3 +5591,23 @@ void CPlayer::SetRelifeStart()
     RelifeON = TRUE;
   }
 }
+BOOL CPlayer::CheckReLifeBuff(cBuffSkillInfo* abuff)
+{
+  BOOL ret = FALSE;
+  DWORD biffindex = abuff->GetIndex();
+  if( biffindex == 0 ){}
+  else{
+    ret = RELIFEEMGR->isAllowBuff( biffindex );
+  }
+  return ret;
+}
+BOOL CPlayer::CheckReLifeSkill(DWORD abuff)
+{
+  BOOL ret = FALSE;
+  DWORD sklindex = abuff->GetIndex();
+  if( sklindex == 0 ){}
+  else{
+    ret = RELIFEEMGR->isAllowSkill( biffindex );
+  }
+  return ret;
+}

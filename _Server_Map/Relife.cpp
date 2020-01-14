@@ -12,6 +12,7 @@ CRelife::CRelife()
 {
 	dwmapnum = 0;
   relife_time_count = 0;
+  relifebuffidx = 0;
 	relife_mode = TRUE; // default yes
   relife_icon =  FALSE; //
 }
@@ -25,6 +26,9 @@ void CRelife::LoadSetup()
 	DWORD alloskillA = 0;
 	DWORD alloskillF = 0;
 	DWORD alloskillE = 0;
+  DWORD allobuffA = 0;
+	DWORD allobuffF = 0;
+	DWORD allobuffE = 0;
 	CMHFile file;
 	file.Init("System/Resource/Relife.txt", "r");
 	if(file.IsInited() == FALSE)
@@ -34,6 +38,8 @@ void CRelife::LoadSetup()
 	}
 	Allowed_skill.reserve(200);
 	Allowed_skill_range.reserve(200);
+  Allowed_buff.reserve(500);
+  Allowed_buff_range.reserve(500);
 	while(1)
 	{
 		file.GetString(tempBuf);
@@ -77,7 +83,22 @@ void CRelife::LoadSetup()
       if( sklbuff ){
         sklbuff->SetDelay( relife_timeup );
         relife_icon = TRUE;
+        relifebuffidx = sklidx;
       }
+    }
+    else if(0==strcmp(string, "#ALLOWED_BUFF_A"))
+		{
+			allobuffA = file.GetDword();
+			Allowed_buff.push_back( alloskillA );
+		}
+		else if(0==strcmp(string, "#ALLOWED_BUFF_RANGE"))
+		{
+			allobuffF = file.GetDword();
+			allobuffE = file.GetDword();
+			AllSkillRange stuff;
+			stuff.dwFirst = alloskillF;
+			stuff.dwEnd = alloskillE;
+			Allowed_buff_range.push_back(stuff);
     }
 	}
 	file.Release();
@@ -93,6 +114,8 @@ void CRelife::reset()
 	relife_mode = TRUE;
 	Allowed_skill.clear();
 	Allowed_skill_range.clear();
+  Allowed_buff.clear();
+	Allowed_buff_range.clear();
 }
 
 BOOL CRelife::isAllowSkill(DWORD skillnum)
@@ -135,4 +158,34 @@ CRelife* CRelife::GetInstance()
 BOOL CRelife::isRelifeIcon()
 {
   return relife_icon;
+}
+BOOL CRelife::isAllowBuff(DWORD buffidx)
+{
+  BOOL ret = FALSE;
+  DWORD ii, iii;
+  AllSkillRange morestuff;
+  DWORD ui = Allowed_buff.size();
+  DWORD ai = Allowed_buff_range.size();
+  if( relife_icon && (relifebuffidx != 0) && (buffidx == relifebuffidx) ){
+    ret = TRUE;
+  }
+  else {
+    for( ii = 0; ii < ui; ii++ )  {
+      if( Allowed_buff[ii] == buffidx ){
+        ret = TRUE;
+        break;
+      }
+    }
+    if( ret == FALSE ){
+      for( iii = 0; iii < ai; iii++){
+        if( buffidx >= Allowed_buff_range[iii].dwFirst &&
+            buffidx <= Allowed_buff_range[iii].dwEnd ){
+          ret = TRUE;
+          break;
+        }
+      }
+    }
+  }
+  
+  return ret;
 }

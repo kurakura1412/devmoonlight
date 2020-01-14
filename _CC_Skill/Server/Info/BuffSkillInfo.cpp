@@ -8,6 +8,9 @@
 #include "..\Object\BuffSkillObject.h"
 #include "../[CC]Header/GameResourceManager.h"
 
+// --- skr 13-01-2020
+#include "Relife.h"
+
 cBuffSkillInfo::cBuffSkillInfo(void) :
 cSkillInfo(cSkillInfo::TypeBuff)
 {
@@ -118,6 +121,8 @@ void cBuffSkillInfo::AddBuffStatus( CObject* pTarget ) const
 	{
 		return;
 	}
+
+
 
 	Status* status = pTarget->GetBuffStatus();
 

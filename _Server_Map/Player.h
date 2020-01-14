@@ -1051,4 +1051,6 @@ public:
   void UpdateRelife();
   void SetRelifeTimer(DWORD anum );
   void SetRelifeStart();
+  BOOL CheckReLifeBuff(cBuffSkillInfo* abuff);
+  BOOL CheckReLifeSkill(DWORD abuff);
 };
