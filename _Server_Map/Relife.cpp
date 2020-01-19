@@ -13,6 +13,8 @@ CRelife::CRelife()
 	dwmapnum = 0;
   relife_time_count = 0;
   relifebuffidx = 0;
+  relife_timeup = 0;
+  relife_buff_count = 0;
 	relife_mode = TRUE; // default yes
   relife_icon =  FALSE; //
 }
@@ -38,8 +40,8 @@ void CRelife::LoadSetup()
 	}
 	Allowed_skill.reserve(200);
 	Allowed_skill_range.reserve(200);
-  Allowed_buff.reserve(500);
-  Allowed_buff_range.reserve(500);
+  Allowed_buff.reserve(200);
+  Allowed_buff_range.reserve(200);
 	while(1)
 	{
 		file.GetString(tempBuf);
@@ -86,6 +88,10 @@ void CRelife::LoadSetup()
         relifebuffidx = sklidx;
       }
     }
+    else if(0==strcmp(string, "#RELIFE_BUFF_COUNT"))
+		{
+      relife_buff_count = file.GetDword();
+    }
     else if(0==strcmp(string, "#ALLOWED_BUFF_A"))
 		{
 			allobuffA = file.GetDword();
@@ -102,6 +108,8 @@ void CRelife::LoadSetup()
     }
 	}
 	file.Release();
+
+  Finalize();
 }
 
 BOOL CRelife::isRelifeMod()
@@ -186,6 +194,34 @@ BOOL CRelife::isAllowBuff(DWORD buffidx)
       }
     }
   }
-  
+
   return ret;
+}
+void CRelife::SetSkillAllow(DWORD sklidx)
+{
+  if( sklidx != 0 ){
+    cSkillInfo* skInfo = SKILLMGR->GetSkillInfo( sklidx );
+    if( skInfo ){
+      skInfo->SetAllowByRelife( TRUE );
+    }
+  }
+}
+void CRelife::Finalize()
+{
+  DWORD i,ii,iii,iv, ifirst, iend,xa,xb;
+  DWORD sklsize = Allowed_skill.size();
+  DWORD sklallsize = Allowed_skill_range.size();
+  for( i = 0 ; i < sklsize; i++){
+    SetSkillAllow( Allowed_skill.at(i));
+  }
+  for(ii=0; ii < sklallsize; ii++){
+    xa = Allowed_skill_range.at(ii).dwEnd;
+    xb = Allowed_skill_range.at(ii).dwFirst;
+    iend = (xa > xb) ? xa : xb;
+    ifirst = (xa < xb) ? xa : xb;
+    iii = iend - ifirst;
+    for(iv = 0; iv < iii; iv++ ){
+      SetSkillAllow( ifirst + iv );
+    }
+  }
 }

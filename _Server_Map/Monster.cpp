@@ -48,12 +48,12 @@ CMonster::~CMonster()
 BOOL CMonster::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseObjectInfo)
 {
 	CObject::Init(kind, AgentNum, pBaseObjectInfo);
-	
+
 	//m_MonsterState = new CStateNPC;
 	m_pTObject = NULL;
 	m_DropItemId = 0;
 	m_dwDropItemRatio = 100;
-	
+
 	m_bEventMob = FALSE;
 	m_bNoCheckCollision = FALSE;
 	m_DieTime = 0;
@@ -69,7 +69,7 @@ void CMonster::Release()
 	SetSubID(0);
 	m_bEventMob = FALSE;
 	m_Distributer.get()->Release();
-	
+
 	CObject::Release();
 }
 
@@ -128,7 +128,7 @@ void CMonster::MoveStop()
 {
 	if(CCharMove::IsMoving(this) == FALSE)
 		return;
-	
+
 	VECTOR3* pos = CCharMove::GetPosition(this);
 	CCharMove::EndMove(this,gCurTime,pos);
 	MOVE_POS msg;
@@ -187,7 +187,7 @@ void CMonster::AddSpeech( DWORD SpeechType, DWORD SpeechIdx )
 		while( (pObject = g_pUserTable->GetUserData() )!= NULL)
 		{
 			if( pObject->GetObjectKind() != eObjectKind_Player ) continue;
-			
+
 			CPlayer* pReceiver = (CPlayer*)pObject;
 			if( GetGridID() == pReceiver->GetChannelID() )
 			{
@@ -222,13 +222,13 @@ void CMonster::OnEndObjectState(EObjectState State)
 	switch(State)
 	{
 	case eObjectState_Die:
-		g_pServerSystem->RemoveMonster(GetID());		
+		g_pServerSystem->RemoveMonster(GetID());
 		break;
 	}
 }
 
 float CMonster::GetRadius() const
-{	
+{
 	return (float)GetSMonsterList().MonsterRadius;
 }
 
@@ -307,7 +307,7 @@ BOOL CMonster::SetTObject(CObject * pNewTPlayer)
 	}
 
 	CObject* const m_pOldTPlayer = m_pTObject;
-	
+
 	if( m_pOldTPlayer )
 	{
 		switch(m_pOldTPlayer->GetObjectKind())
@@ -511,9 +511,9 @@ void CMonster::DoDamage(CObject* pAttacker,RESULTINFO* pDamageInfo,DWORD beforeL
 	{
 		return;
 	}
-	
+
 	RequestHelp(*pDamageInfo);
-	
+
 	GSTATEMACHINE.SetState(this, eMA_ATTACK);
 	cActiveSkillObject* skillObject = (cActiveSkillObject*)SKILLMGR->GetSkillObject(GetCurrentSkill());
 
@@ -585,10 +585,10 @@ void CMonster::DoDie(CObject* pAttacker)
 				g_csDateManager.SRV_ProcMonsterDie(
 					ownerPlayer);
 			}
-		} 
+		}
 
 	}
-	
+
 	//SW050902
 	MonSpeechInfo* pTemp = MON_SPEECHMGR->GetCurStateSpeechIndex( this->GetMonsterKind(), eMon_Speech_Death );
 	if( pTemp )
@@ -601,7 +601,7 @@ void CMonster::DoDie(CObject* pAttacker)
 void CMonster::GetSendMoveInfo(SEND_MOVEINFO* pRtInfo,CAddableInfoList* pAddInfoList)
 {
 	CObject::GetSendMoveInfo(pRtInfo,pAddInfoList);
-	pRtInfo->KyungGongIdx = (WORD)mStateParamter.stateCur;	
+	pRtInfo->KyungGongIdx = (WORD)mStateParamter.stateCur;
 }
 
 float CMonster::DoGetMoveSpeed()
@@ -643,7 +643,7 @@ float CMonster::DoGetMoveSpeed()
 void CMonster::OnStop()
 {
 	if(CCharMove::IsMoving(this) == FALSE) return;
-	
+
 	VECTOR3* pos = CCharMove::GetPosition(this);
 	CCharMove::EndMove(this, gCurTime, pos);
 	MOVE_POS msg;
@@ -698,7 +698,7 @@ void CMonster::OnMove( VECTOR3 * pPos )
 
 	WORD count = m_MoveInfo.GetMaxTargetPosIdx();
 
-	// jsd 
+	// jsd
 	if( count == 0 )
 		return;
 	else if( count == 1 )
@@ -726,7 +726,7 @@ void CMonster::OnMove( VECTOR3 * pPos )
 			msg.AddTargetPos(m_MoveInfo.GetTargetPosition(i));
 
 		PACKEDDATA_OBJ->QuickSend(this,&msg,msg.GetSize());
-	}	
+	}
 
 	m_MoveInfo.SetCurTargetPosIdx(0);
 	ASSERT(m_MoveInfo.GetCurTargetPosIdx()< m_MoveInfo.GetMaxTargetPosIdx());
@@ -764,7 +764,7 @@ BOOL CMonster::DoAttack( DWORD attackNum )
 
 BOOL CMonster::DoWalkAround()
 {
-	VECTOR3* pThisPos = CCharMove::GetPosition(this);	
+	VECTOR3* pThisPos = CCharMove::GetPosition(this);
 	VECTOR3 emptyPosition = {0};
 	VECTOR3 domainPoint = (emptyPosition == mDomainPosition ? *pThisPos : mDomainPosition);
 	VECTOR3 decisionPoint = {0};
@@ -781,7 +781,7 @@ BOOL CMonster::DoWalkAround()
 		&domainPoint,
 		10000.0f,
 		&decisionPoint);
-	
+
 	int ran = rand();
 	const float dx = float(ran%GetSMonsterList().DomainRange) * (ran%2?1:-1);
 	ran = rand();
@@ -792,7 +792,7 @@ BOOL CMonster::DoWalkAround()
 	Target.z = decisionPoint.z + dz;
 
 	VECTOR3 CollisonPos = {0};
-	
+
 	if(g_pServerSystem->GetMap()->CollisionCheck(pThisPos,&Target,&CollisonPos,this) == TRUE)
 	{
 		Target.x = decisionPoint.x - dx;
@@ -818,7 +818,7 @@ BOOL CMonster::DoWalkAround()
 		Target.z = 10;
 	else if(Target.z > 51200)
 		Target.z = 51200;
-	
+
 	OnMove(&Target);
 
 	return TRUE;
@@ -885,7 +885,7 @@ BOOL CMonster::DoPursuit()
 			{
 				continue;
 			}
-			else if( ((CMonster*)object)->mStateParamter.stateCur == eMA_PERSUIT || 
+			else if( ((CMonster*)object)->mStateParamter.stateCur == eMA_PERSUIT ||
 					((CMonster*)object)->mStateParamter.stateCur == eMA_RUNAWAY ||
 					((CMonster*)object)->mStateParamter.stateCur == eMA_WALKAWAY ||
 					((CMonster*)object)->mStateParamter.stateCur == eMA_ATTACK )
@@ -1049,8 +1049,8 @@ void CMonster::RemoveAllAggro()
 }
 
 void CMonster::SetObjectBattleState(eObjectBattleState state)
-{ 
-	m_BaseObjectInfo.ObjectBattleState = state; 
+{
+	m_BaseObjectInfo.ObjectBattleState = state;
 
 	if( state )
 	{
@@ -1068,7 +1068,7 @@ void CMonster::Process()
 	if(m_DieTime)
 	{
 		if(m_DieTime < gCurTime)
-		{			
+		{
 			MSG_DWORD2 msg;
 			msg.Category = MP_USERCONN;
 			msg.Protocol = MP_USERCONN_MONSTER_DIE;
@@ -1159,7 +1159,7 @@ void CMonster::RequestHelp(const RESULTINFO& resultInfo)
 
 	switch(baseMonsterList.mHelpType)
 	{
-	case BASE_MONSTER_LIST::HelpLifeIsUnder50Percent: 
+	case BASE_MONSTER_LIST::HelpLifeIsUnder50Percent:
 		{
 			if(GetLife() > GetMaxLife() / 2)
 			{
@@ -1174,7 +1174,7 @@ void CMonster::RequestHelp(const RESULTINFO& resultInfo)
 				0);
 			break;
 		}
-	case BASE_MONSTER_LIST::HelpLifeIsUnder30Percent: 
+	case BASE_MONSTER_LIST::HelpLifeIsUnder30Percent:
 		{
 			if(GetLife() > GetMaxLife() / 3)
 			{
@@ -1189,8 +1189,8 @@ void CMonster::RequestHelp(const RESULTINFO& resultInfo)
 				0);
 			break;
 		}
-	case BASE_MONSTER_LIST::HelpDie: 
-		{ 
+	case BASE_MONSTER_LIST::HelpDie:
+		{
 			if(0 < GetLife())
 			{
 				break;
@@ -1204,7 +1204,7 @@ void CMonster::RequestHelp(const RESULTINFO& resultInfo)
 				0);
 			break;
 		}
-	case BASE_MONSTER_LIST::HelpAlways: 
+	case BASE_MONSTER_LIST::HelpAlways:
 		{
 			g_pAISystem.SendMsg(
 				eMK_HelpRequest,

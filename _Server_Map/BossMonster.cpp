@@ -27,7 +27,7 @@ CBossMonster::~CBossMonster()
 BOOL CBossMonster::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseObjectInfo)
 {
 	CMonster::Init(kind, AgentNum, pBaseObjectInfo);
-	
+
 	/// 06. 08. 2Â÷ º¸½º - ÀÌ¿µÁØ
 	/*m_CurAttackIdx = 1601;*/
 	m_AttackStartTime = 0 ;
@@ -36,7 +36,7 @@ BOOL CBossMonster::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseO
 	m_IsEventStating = FALSE;
 	DistributeDamageInit();
 	m_bOpenning = TRUE;
-	
+
 	BOSSMONMGR->AddBossMonster(this);
 
 	return TRUE;
@@ -45,7 +45,7 @@ BOOL CBossMonster::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseO
 void CBossMonster::DoDie(CObject* pAttacker)
 {
 	BOSSMONMGR->RegenGroup(this, GetSummonFileNum(), m_pBossMonsterInfo->GetDieGroupID());
-	
+
 	// ¸®Á¨ Á¤º¸ µî·Ï
 	BOSSMONMGR->SetBossRandRegenChannel(GetMonsterKind(), GetGridID(), GetMonsterGroupNum());
 	BOSSMONMGR->DeleteBossMonster(this);
@@ -74,14 +74,14 @@ void CBossMonster::SetBossInfo(CBossMonsterInfo* pInfo)
 	m_CurAttackIdx = pInfo->GetFirstAttackIdx();
 	m_AttackStartTime = 0 ;
 	m_EventActionValue = 0;
-	
+
 	BOSSEVENTSTATE* pEventState = pInfo->GetEventStateInfo();
 	if(pInfo->GetMaxEventStateNum() == 0)
 	{
 		ASSERTMSG(0, "BossEventState Num is Zero");
 	}
 	else
-	{		
+	{
 		m_BossEventState = new BOSSEVENTSTATE[pInfo->GetMaxEventStateNum()];
 		for(int i=0; i<pInfo->GetMaxEventStateNum(); ++i)
 		{
@@ -100,17 +100,17 @@ void CBossMonster::SetBossInfo(CBossMonsterInfo* pInfo)
 
 void CBossMonster::SetLife(DWORD Life, BOOL bSendMsg)
 {
-	CMonster::SetLife(Life, bSendMsg);	
-	
+	CMonster::SetLife(Life, bSendMsg);
+
 	if(m_BossEventState == 0)
 	{
 		ASSERTMSG(0, "Boss SetLife EventState is NULL");
 	}
 	else
 	{
-		OnLifeEvent(Life);		
+		OnLifeEvent(Life);
 	}
-	
+
 	MSG_DWORD2 msg;
 	msg.Category = MP_BOSSMONSTER;
 	msg.Protocol = MP_BOSS_LIFE_NOTIFY;
@@ -122,10 +122,10 @@ void CBossMonster::SetLife(DWORD Life, BOOL bSendMsg)
 void CBossMonster::DoDamage(CObject* pAttacker,RESULTINFO* pDamageInfo,DWORD beforeLife)
 {
 	//CMonster::DoDamage(pAttacker, pDamageInfo, beforeLife);
-	
+
 	if( pAttacker->GetGridID() != GetGridID() )
 		return;
-    
+
 // --- skr 13-01-2020
   if( pAttacker->GetObjectKind() == eObjectKind_Player )
 	{
@@ -145,14 +145,14 @@ void CBossMonster::DoDamage(CObject* pAttacker,RESULTINFO* pDamageInfo,DWORD bef
 	{
 		EndBuffSkillByStatus( eStatusKind_Slip );
 	}
-	
+
 	if( pDamageInfo->RealDamage > beforeLife )
 		pDamageInfo->RealDamage = (WORD)beforeLife;
 
 	if( pAttacker->GetObjectKind() == eObjectKind_Player )
 	{
 		AddDamageObject( (CPlayer*)pAttacker, pDamageInfo->RealDamage, 0 );
-		
+
 		if( GSTATEMACHINE.IsTargetChange(pAttacker, this) && m_BossState.GetCurState() == eBossState_WalkAround )
 		{
 			SetTargetObject((CObject*)pAttacker);
@@ -188,18 +188,18 @@ void CBossMonster::DoDamage(CObject* pAttacker,RESULTINFO* pDamageInfo,DWORD bef
 			}
 		}
 	}
-	
+
 	AddAggro(
 		pAttacker->GetID(),
 		pDamageInfo->RealDamage,
 		pDamageInfo->mSkillIndex);
 
 	if(m_BossState.GetCurState() != eBossState_Attack)
-	{		
+	{
 		if(m_BossState.GetStateEndTime() > gCurTime)
 			return;
 		SetBossState(eBossState_Attack);
-	}	
+	}
 }
 
 void CBossMonster::Process()
@@ -211,10 +211,10 @@ void CBossMonster::Process()
 		return;
 
 	if(m_BossState.IsStateUpdated())
-	{		
+	{
 		m_BossState.UpdateState();
 	}
-	
+
 	ySWITCH(m_BossState.GetCurState())
 	yCASE(eBossState_Attack)
 	Attack();
@@ -236,7 +236,7 @@ void CBossMonster::Process()
 }
 
 void CBossMonster::Attack()
-{	
+{
 	m_bDelete = FALSE;
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -272,7 +272,7 @@ void CBossMonster::Attack()
 		{
 			SetBossState(eBossState_Pursuit);
 			return;
-		}	
+		}
 
 		//DWORD delay = 30;//SKILLMGR->GetSkillInfo(m_CurAttackIdx);
 		m_BossState.SetStateEndTime(gCurTime+delay);
@@ -284,7 +284,7 @@ void CBossMonster::Attack()
 		msg.Protocol = MP_BOSS_STAND_END_NOTIFY;
 		msg.dwData = GetID();
 		PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
-				
+
 		return;
 	}
 	else if(m_pBossMonsterInfo->IsAttackEmpty() == FALSE)
@@ -292,21 +292,21 @@ void CBossMonster::Attack()
 		const cActiveSkillInfo* const pSkillInfo = SKILLMGR->GetActiveInfo(m_CurAttackIdx);
 
 		if(m_BossState.GetStateEndTime()  < gCurTime)
-		{		
+		{
 			VECTOR3 TObjectPos	= *CCharMove::GetPosition(GetTObject());
 			//DWORD	Distance	= (DWORD)CalcDistanceXZ( &ObjectPos, &TObjectPos );
-			
+
 			if( !pSkillInfo->IsInRange(*this, TObjectPos, GetTObject()->GetRadius()))
 			{
 				SetBossState(eBossState_Pursuit);
 			}
 			else
-			{				
+			{
 				m_AttackStartTime = gCurTime;
 				DWORD delay = pSkillInfo->GetInfo().AnimationTime + 400;
 				m_BossState.SetStateEndTime(gCurTime+delay);
 				DoAttack();
-				ChangeCurAttackIdx();				
+				ChangeCurAttackIdx();
 			}
 		}
 		else
@@ -316,7 +316,7 @@ void CBossMonster::Attack()
 	}
 	else
 	{
-		SetBossState(eBossState_Stand);		
+		SetBossState(eBossState_Stand);
 	}
 }
 
@@ -339,8 +339,8 @@ void CBossMonster::Pursuit()
 		return;
 	}
 
-	if(m_BossState.IsStateFirst()) // Ã³À½ ½ÃÀÛÇÑ°Å¸é 
-	{		
+	if(m_BossState.IsStateFirst()) // Ã³À½ ½ÃÀÛÇÑ°Å¸é
+	{
 		mStateParamter.PursuitForgiveStartTime = gCurTime;
 		m_BossState.SetStateStartTime(0);
 		m_BossState.SetStateEndTime(1000);
@@ -368,15 +368,15 @@ void CBossMonster::Pursuit()
 		if( mStateParamter.prePursuitForgiveTime == 0 && ( mStateParamter.PursuitForgiveStartTime + baseMonsterList.PursuitForgiveTime < gCurTime || baseMonsterList.PursuitForgiveDistance < Distance ) )
 		{
 			mStateParamter.SearchLastTime = gCurTime;
-			SetBossState(eBossState_WalkAround);			
-		}	
+			SetBossState(eBossState_WalkAround);
+		}
 		else
 		{
 			if( mStateParamter.prePursuitForgiveTime != 0 && mStateParamter.PursuitForgiveStartTime + mStateParamter.prePursuitForgiveTime < gCurTime )
 			{
 				mStateParamter.prePursuitForgiveTime = 0;
 				mStateParamter.SearchLastTime = gCurTime;
-				SetBossState(eBossState_WalkAround);				
+				SetBossState(eBossState_WalkAround);
 			}
 			else if (pSkillInfo->IsInRange(*this, TObjectPos, GetTObject()->GetRadius()))
 			{
@@ -395,7 +395,7 @@ void CBossMonster::SetCurAttackIdx(DWORD AttackIdx)
 {
 	m_CurAttackIdx = AttackIdx;
 }
-	
+
 DWORD CBossMonster::GetCurAttackIdx()
 {
 	return m_CurAttackIdx;
@@ -412,14 +412,14 @@ BOOL CBossMonster::SetBossState(int state)
 		return FALSE;
 	if(m_BossState.GetNextState())
 	{
-		
+
 		return FALSE;
 	}
 
 	m_BossState.SetState(state);
 
 	if(state == eBossState_WalkAround || state == eBossState_Pursuit || state == eBossState_RunAway)
-	{	
+	{
 		// 080204 KTH -- ¸ÊÀÌ ¸·ÇôÀÖ¾îµµ ¹«½ÃÇÑ´Ù.
 		if( !IsNoCheckCollision() )
 			SetNoCheckCollision( TRUE );	//Ignore TTB
@@ -437,7 +437,7 @@ BOOL CBossMonster::SetBossState(int state)
 void CBossMonster::WalkAround()
 {
 	const BASE_MONSTER_LIST& baseMonsterList = GetSMonsterList();
-	
+
 	if( m_pBossMonsterInfo->GetDeleteTime() )
 	{
 		if( m_bDelete )
@@ -463,7 +463,7 @@ void CBossMonster::WalkAround()
 		m_BossState.SetStateFirst(FALSE);
 	}
 	else
-	{				
+	{
 		if( m_BossState.GetStateEndTime() < gCurTime )
 		{
 			int rate = rand()%100;
@@ -537,7 +537,7 @@ void CBossMonster::Stand()
 			m_bOpenning = FALSE;
 		}
 		//m_BossState.SetStateEndTime(gCurTime+3500);
-				
+
 		SetTObject(NULL);
 		CMonster::DoStand();
 		return;
@@ -548,13 +548,13 @@ void CBossMonster::Stand()
 	if(m_BossState.GetStateStartTime() + pUngi->dwStartTime < gCurTime)
 	{
 		DWORD dwUngiTime = pUngi->dwDelayTime;
-	 
+
 	// ungi plus time for character
 	// dwUngiTime = dwUngiTime*(1/gUngiSpeed);
-		
+
 		DWORD maxlife = GetMaxLife();
 		DWORD curlife = GetLife();
-		
+
 		if(gCurTime - m_LifeRecoverTime.lastCheckTime > dwUngiTime)
 		{
 			if(curlife < maxlife)
@@ -564,7 +564,7 @@ void CBossMonster::Stand()
 				m_LifeRecoverTime.lastCheckTime = gCurTime;
 			}
 		}
-	}	
+	}
 }
 
 // 091026 LUJ, ¹öÆÛ Å©±â¿¡ ¹«°üÇÏ°Ô Àü¼ÛÇÒ ¼ö ÀÖµµ·Ï ¼öÁ¤
@@ -590,7 +590,7 @@ void CBossMonster::SetEventState(BYTE EventState, DWORD ActionValue)
 	{
 	case eBOSSACTION_RECOVER:
 		{
-			SetBossNextState(eBossState_Recover);			
+			SetBossNextState(eBossState_Recover);
 		}
 		break;
 	case eBOSSACTION_SUMMON:
@@ -599,7 +599,7 @@ void CBossMonster::SetEventState(BYTE EventState, DWORD ActionValue)
 		}
 		break;
 	}
-	
+
 //	MHERROR->OutputFile("Debug.txt", MHERROR->GetStringArg("Set EventState : %d", EventState));
 
 	SetEventActionValue(ActionValue);
@@ -608,24 +608,24 @@ void CBossMonster::SetEventState(BYTE EventState, DWORD ActionValue)
 void CBossMonster::Recover()
 {
 	if(m_BossState.IsStateFirst())
-	{		
+	{
 		m_BossState.SetStateStartTime(gCurTime);
 		m_BossState.SetStateEndTime(gCurTime+3500);
 		m_BossState.SetStateFirst(FALSE);
 		CCharacterCalcManager::StartUpdateLife( this, GetMaxLife()*m_EventActionValue/100, 5, 2500 );
-		
+
 		MSG_DWORD msg;
 		msg.Category = MP_BOSSMONSTER;
 		msg.Protocol = MP_BOSS_REST_START_NOTIFY;
 		msg.dwData = GetID();
-		PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));	
+		PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
 		//MHERROR->OutputFile("Debug.txt", MHERROR->GetStringArg("Recover Start"));
 	}
 	if(m_BossState.GetStateEndTime() < gCurTime)
 	{
 		m_IsEventStating = FALSE;
 		SetBossState(eBossState_Attack);
-		
+
 		//MHERROR->OutputFile("Debug.txt", MHERROR->GetStringArg("EndRecover State"));
 	}
 }
@@ -633,7 +633,7 @@ void CBossMonster::Recover()
 void CBossMonster::Summon()
 {
  	if(m_BossState.IsStateFirst())
-	{		
+	{
 		m_BossState.SetStateStartTime(gCurTime);
 		m_BossState.SetStateEndTime(gCurTime+3500);
 		m_BossState.SetStateFirst(FALSE);
@@ -733,12 +733,12 @@ void CBossMonster::OnLifeEvent(DWORD Life)
 				if(rate < (float)m_BossEventState[i].ConditionValue)
 				{
 					SetEventState(m_BossEventState[i].Action, m_BossEventState[i].ActionValue);
-					m_BossEventState[i].Count--;					
+					m_BossEventState[i].Count--;
 					break;
 				}
 			}
 		}
-	}	
+	}
 }
 
 void CBossMonster::SetBossNextState(int state)
@@ -773,7 +773,7 @@ BOOL CBossMonster::DoWalkAround()
 	// 250 :  Ãæµ¹½Ã SearchÇÏ´Â Delay
 	else if(m_CurAttackIdx && mStateParamter.CollSearchLastTime + 250 < gCurTime )
 	{
-		mStateParamter.CollSearchLastTime = gCurTime;		
+		mStateParamter.CollSearchLastTime = gCurTime;
 		SetTargetObject(
 			OnCollisionObject());
 		return TRUE;
@@ -799,7 +799,7 @@ void CBossMonster::SetTargetObject(CObject* TObject)
 		{
 			return;
 		}
-		
+
 		m_BossState.SetState(eBossState_Pursuit);
 		//SetTObject((CPlayer *)TObject);
 		SetTObject(pPlayer);

@@ -135,7 +135,7 @@ void cActiveSkillObject::Init( sSKILL_CREATE_INFO* pInfo )
 	}
 
 	MSG_SKILLOBJECT_ADD2 msg;
-	
+
 	msg.Category = MP_SKILL;
 	msg.Protocol = MP_SKILL_SKILLOBJECT_ADD;
 	msg.bCreate = TRUE;
@@ -291,12 +291,18 @@ void cActiveSkillObject::Excute()
       if( pTarget->GetObjectKind() == eObjectKind_Player ){
         CPlayer * tplayer = (CPlayer *)pTarget;
         if( tplayer->IsRelifeON() ){
-          if( !tplayer->CheckReLifeBuff(buffSkillInfo)){
+          //if( !tplayer->CheckReLifeBuff(buffSkillInfo)){
+          //  continue;
+          //}
+          //if( !tplayer->CheckReLifeSkill( GetSkillIdx() )){
+          //  continue;
+          //}
+          if( !isRelifeAllow() ){
             continue;
           }
         }
       }
-      
+
 			sSKILL_CREATE_INFO skillCreateInfo = mSkillObjectInfo;
 			skillCreateInfo.mainTarget.SetMainTarget(
 				pTarget->GetID());

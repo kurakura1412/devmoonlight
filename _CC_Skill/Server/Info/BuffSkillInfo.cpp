@@ -37,7 +37,7 @@ void cBuffSkillInfo::AddPassiveStatus( CPlayer* pPlayer ) const
 	{
 		pStatus = pPlayer->GetPassiveStatus();
 	}
-	else if( mInfo.StatusDataType == BUFF_SKILL_INFO::StatusTypePercent ) 
+	else if( mInfo.StatusDataType == BUFF_SKILL_INFO::StatusTypePercent )
 	{
 		pStatus = pPlayer->GetRatePassiveStatus();
 	}
@@ -80,7 +80,7 @@ void cBuffSkillInfo::RemovePassiveStatus( CPlayer* pPlayer ) const
 	{
 		pStatus = pPlayer->GetPassiveStatus();
 	}
-	else if( mInfo.StatusDataType == BUFF_SKILL_INFO::StatusTypePercent ) 
+	else if( mInfo.StatusDataType == BUFF_SKILL_INFO::StatusTypePercent )
 	{
 		pStatus = pPlayer->GetRatePassiveStatus();
 	}
@@ -98,7 +98,7 @@ void cBuffSkillInfo::RemovePassiveStatus( CPlayer* pPlayer ) const
 		*pStatus,
 		buff,
 		SetSkillStatusRemove );
-	
+
 	// 081203 LUJ, ½ºÅ³ ½ºÅ©¸³Æ®¸¦ Àû¿ëÇÑ´Ù
 	{
 		const SkillScript& script = GAMERESRCMNGR->GetSkillScript( GetIndex() );
@@ -629,7 +629,7 @@ void cBuffSkillInfo::SetStatus( CObject& object, Status& status, const SkillScri
 			( *function )( status.MagicSkillSpeedRate, buff.mValue );
 			break;
 		}
-	case eStatusKind_NormalPhysicSkillSpeedRate:	
+	case eStatusKind_NormalPhysicSkillSpeedRate:
 		{
 			( *function )( status.NormalSpeedRate, buff.mValue );
 			( *function )( status.PhysicSkillSpeedRate, buff.mValue );

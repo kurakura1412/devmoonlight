@@ -123,14 +123,14 @@ struct ProcessTime
 processTime;
 
 
-// taiyo 
+// taiyo
 CServerSystem * g_pServerSystem = NULL;
 
 CServerSystem::CServerSystem()
 {
 	srand(GetTickCount());
 	CoInitialize(NULL);
-	
+
 	g_pUserTable = new CUserTable;
 	g_pUserTable->Init(2000);
 	g_pServerTable = new CServerTable;
@@ -149,7 +149,7 @@ CServerSystem::CServerSystem()
 //-- for test
 	m_dwMainProcessTime = 0;
 
-	// 070809 ¿õÁÖ, ±æµå Á¤º¸¸¦ ¸ðµÎ ÀÐ±â Àü±îÁö ÀÌ °ªÀÌ FALSE·Î µÇ¾îÀÖµµ·Ï µÇ¾î ÀÖÀ¸³ª.. 
+	// 070809 ¿õÁÖ, ±æµå Á¤º¸¸¦ ¸ðµÎ ÀÐ±â Àü±îÁö ÀÌ °ªÀÌ FALSE·Î µÇ¾îÀÖµµ·Ï µÇ¾î ÀÖÀ¸³ª..
 	//				¾ÕÀ¸·Î ±æµå Á¤º¸´Â ÇÊ¿äÇÑ ½ÃÁ¡¿¡¸¸ ·ÎµåÇÒ °ÍÀÌ´Ù. µû¶ó¼­ ÀÌ °ªÀº ÃÊ±âÈ­ ÈÄ ÂüÀÌ µÈ´Ù.
 	//				±æµå Á¤º¸ÀÇ Áö¿¬ ·Îµù ÀÛ¾÷ÀÌ ¸ðµÎ ³¡³ª¸é ÀÌ ÇÃ·¡±× ÀÚÃ¼°¡ ÇÊ¿ä¾ø´Ù.
 	m_start	= TRUE;
@@ -168,7 +168,7 @@ CServerSystem::~CServerSystem()
 }
 
 void CServerSystem::Start(WORD ServerNum)
-{	
+{
 	m_bCheckProcessTime = FALSE;
 	m_dwProcessCount = 0;
 
@@ -186,7 +186,7 @@ void CServerSystem::Start(WORD ServerNum)
 		{"..toggle msg", ButtonTogglePeriodicMessageOfTrigger},
 		{"..toggle Time", ButtonToggleProcessTime}
 	};
-	
+
 	if(FALSE == g_Console.Init(sizeof(menu)/sizeof(*menu), menu, OnCommand))
 	{
 		MessageBox(
@@ -206,7 +206,7 @@ void CServerSystem::Start(WORD ServerNum)
 	g_Console.LOG(4, "¡¡") ;
 	g_Console.LOG(4, "[ Server Version : %s ]", g_SERVER_VERSION) ;
 	g_Console.LOG(4, "¡¡") ;
-	
+
 	//DWORD    dwProcessID = NULL;
     //DWORD    dwTreadID = ::GetWindowThreadProcessId(g_hWnd, &dwProcessID );
 
@@ -231,14 +231,14 @@ void CServerSystem::Start(WORD ServerNum)
 
 	STARTLOG(BOSSMONMGR->LoadBossMonsterInfoList());
 	STARTLOG(BOSSREWARDSMGR->LoadBossRewardsInfo());
-	
+
 	// ÇÊµåº¸½º - 05.12 ÀÌ¿µÁØ
 	STARTLOG(FIELDBOSSMONMGR->Init());
 	STARTLOG(GAMERESRCMNGR->LoadNpcList());
 	STARTLOG(GAMERESRCMNGR->LoadStaticNpc());
 	// 06. 05 HIDE NPC - ÀÌ¿µÁØ
-	STARTLOG(GAMERESRCMNGR->LoadHideNpcList());	
-	STARTLOG(GAMERESRCMNGR->LoadSkillMoney());	
+	STARTLOG(GAMERESRCMNGR->LoadHideNpcList());
+	STARTLOG(GAMERESRCMNGR->LoadSkillMoney());
 	STARTLOG(GAMERESRCMNGR->LoadExpPoint());
 	STARTLOG(GAMERESRCMNGR->LoadFishingExpPoint());
 	STARTLOG(GAMERESRCMNGR->LoadPlayerxMonsterPoint());
@@ -246,12 +246,12 @@ void CServerSystem::Start(WORD ServerNum)
 	STARTLOG(NPCRECALLMGR->LoadNPCBuffList());
 
 	STARTLOG(STORAGEMGR->LoadStorageList());
-	STARTLOG(ITEMMGR->LoadItemList());	
+	STARTLOG(ITEMMGR->LoadItemList());
 	STARTLOG(ITEMMGR->LoadDealerItem());
 
 	STARTLOG(ITEMMGR->LoadMonSummonItemInfo());
 	STARTLOG(ITEMMGR->LoadNpcSummonItemInfo());
-	STARTLOG(ITEMMGR->LoadScriptFileDataChangeItem());	
+	STARTLOG(ITEMMGR->LoadScriptFileDataChangeItem());
 	STARTLOG(MON_SPEECHMGR->LoadMonSpeechInfoList());
 	STARTLOG(PETMGR->LoadPetInfo());
 	STARTLOG(m_Map.InitMap(ServerNum));
@@ -261,7 +261,7 @@ void CServerSystem::Start(WORD ServerNum)
 
 	// quest
 	STARTLOG(QUESTMGR->LoadQuestScript());
-	STARTLOG(QUESTREGENMGR->LoadData());	
+	STARTLOG(QUESTREGENMGR->LoadData());
 	AUTONOTEMGR->Init();
 
 	g_pServerMsgParser[MP_POWERUP] = MP_POWERUPMsgParser;
@@ -342,7 +342,7 @@ void CServerSystem::Start(WORD ServerNum)
 	desc.dwFlag = 0;
 
 	STARTLOG(g_Network.Init(&desc));
-	
+
 	if(!BOOTMNGR->StartServer(&g_Network, g_pServerTable->GetSelfServer()))
 	{
 		//ASSERT(0);
@@ -351,7 +351,7 @@ void CServerSystem::Start(WORD ServerNum)
 	{
 		SERVERINFO info;
 		info.wServerKind = MONITOR_SERVER;
-		OnConnectServerFail(&info);		
+		OnConnectServerFail(&info);
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -369,7 +369,7 @@ void CServerSystem::Start(WORD ServerNum)
   	SIEGEWARFAREMGR->Init() ;
   	SIEGEDUNGEONMGR->LoadInfo();
   	SIEGERECALLMGR->Initialieze() ;
-	
+
 	// Guild Tournament
 	GTMGR->Init();
 
@@ -388,13 +388,13 @@ void CServerSystem::Start(WORD ServerNum)
 	GuildResetWarehouse( m_wMapNum );
 	// 100305 ONS ¸Ê±âµ¿½Ã DBÀÇ PC¹æ ¹öÇÁÁ¤º¸¸¦ ÃÊ±âÈ­ÇÑ´Ù.
 	PCROOMMGR->Init();
-	
+
 	// S ³óÀå½Ã½ºÅÛ Ãß°¡ added by hseos 2007.04.30	2007.09.07
 	// 081017 LUJ, ³óÀå Á¤º¸¸¦ ÀÏ°ý Äõ¸®ÇÏµµ·Ï ¼öÁ¤
 	{
 		g_csFarmManager.Init( GetMapNum() );
 		int farmZoneId = 0;
-		
+
 		// 090520 LUJ, °¢°¢ÀÇ ³óÀå Á¤º¸¸¦ ÀÐ¾î¿Ã ¼ö ÀÖµµ·Ï ¼öÁ¤
 		if( TRUE == g_csFarmManager.GetFarmZoneID( GetMapNum(), &farmZoneId ) )
 		{
@@ -408,7 +408,7 @@ void CServerSystem::Start(WORD ServerNum)
 					"EXEC dbo.MP_FARM_SELECT %d",
 					farmZoneId );
 
-				// 091126 pdy 0¹ø ³óÀåÀÇ 0¹ø ÀÛ¹°,°¡ÃàÀÌ ·Îµå°¡ ¾ÈµÇ´Â ¹ö±× ¼öÁ¤   
+				// 091126 pdy 0¹ø ³óÀåÀÇ 0¹ø ÀÛ¹°,°¡ÃàÀÌ ·Îµå°¡ ¾ÈµÇ´Â ¹ö±× ¼öÁ¤
 				g_DB.FreeQuery(
 					eFarm_LoadCropInfo,
 					farmZoneId,
@@ -506,7 +506,7 @@ void CServerSystem::Process()
 	WEATHERMGR->Process();
 	FISHINGMGR->Process();
 	COOKMGR->Process();
-	
+
 	// 091229 ShinJS --- PC¹æ ÀÌº¥Æ® Process
 	PCROOMMGR->Process();
 
@@ -517,7 +517,7 @@ void CServerSystem::Process()
 	{
 		if(pObject->GetInited() == FALSE)
 			continue;
-		
+
 		pObject->StateProcess();
 		pObject->ProceedToTrigger();
 
@@ -540,9 +540,9 @@ void CServerSystem::Process()
 			CPlayer* pPlayer = (CPlayer*)pObject;
 // --- skr 12/01/2020
       if( pPlayer->IsRelifeON() ) { pPlayer->UpdateRelife(); }
-      
+
 			CCharacterCalcManager::ProcessLife(pPlayer);
-			CCharacterCalcManager::UpdateMana(pPlayer);	
+			CCharacterCalcManager::UpdateMana(pPlayer);
 			CCharacterCalcManager::ProcessMana(pPlayer);
 
 			pPlayer->QuestProcess();
@@ -597,7 +597,7 @@ void CServerSystem::Process()
 	GTMGR->Process();
 
 	SIEGEWARFAREMGR->Process();
-	
+
 	m_bQuestTime = FALSE;
 
 //--- Test
@@ -619,7 +619,7 @@ void CServerSystem::Process()
 	// ..ÀÌ ÇÔ¼öº¸´Ù ¾Æ·¡¿¡ À§Ä¡ÇÏ´Â ÇÔ¼ö°¡ ÀÖÀ» °æ¿ì ±× ÇÔ¼ö¿¡¼­ OldLocalTime À» »ç¿ëÇÏ¸é OldLocalTime °ªÀÌ ¼³Á¤µÇÁö ¾ÊÀ½.
 	MHTIMEMGR_OBJ->ProcOldLocalTime();
 	LIMITDUNGEONMGR->Process() ;
-	
+
 	QueryPerformanceCounter(&m_TriggerProc[0]);
 	TRIGGERMGR->Process();
 	QueryPerformanceCounter(&m_TriggerProc[1]);
@@ -628,7 +628,7 @@ void CServerSystem::Process()
 	DungeonMGR->Process();
 	QueryPerformanceCounter(&m_DungeonProc[1]);
 	NPCRECALLMGR->Process() ;
-	
+
 	// 071218 LUJ
 	{
 		processTime.mCurrentTick	=	GetTickCount();
@@ -660,7 +660,7 @@ void CServerSystem::Process()
 		if(m_fTimeDungeonProc < fTimeDungeonProc)
 			m_fTimeDungeonProc = fTimeDungeonProc;
 
-		
+
 		if(gCurTime > dwLastPutLogTime + 5000)
 		{
 			if(DungeonMGR->IsDungeon(g_pServerSystem->GetMapNum()))
@@ -808,7 +808,7 @@ CPlayer* CServerSystem::AddPlayer(DWORD dwPlayerID,DWORD dwAgentNum,DWORD Unique
 			pPlayer->SendMsg(
 				&message,
 				message.GetMsgLength());
-			
+
 
 			FILE* fpLog = NULL;
 			fpLog = fopen( "./Log/DungeonEnterLog.txt", "a+" );
@@ -817,7 +817,7 @@ CPlayer* CServerSystem::AddPlayer(DWORD dwPlayerID,DWORD dwAgentNum,DWORD Unique
 				SYSTEMTIME sysTime;
 				GetLocalTime( &sysTime );
 
-				fprintf( fpLog, "[%04d-%02d-%02d %02d:%02d:%02d] %s - AlertDungeon [PlayerID : %d, AgentNum : %d, ChannelNum : %d, UserLv : %d] \n", 
+				fprintf( fpLog, "[%04d-%02d-%02d %02d:%02d:%02d] %s - AlertDungeon [PlayerID : %d, AgentNum : %d, ChannelNum : %d, UserLv : %d] \n",
 					sysTime.wYear, sysTime.wMonth, sysTime.wDay, sysTime.wHour, sysTime.wMinute, sysTime.wSecond,
 					__FUNCTION__,
 					dwPlayerID, dwAgentNum, num, userLevel );
@@ -867,7 +867,7 @@ CPlayer* CServerSystem::InitPlayerInfo(BASEOBJECT_INFO* pBaseObjectInfo,CHARACTE
 CMonster* CServerSystem::AddMonster(DWORD dwSubID, BASEOBJECT_INFO* pBaseObjectInfo,MONSTER_TOTALINFO* pTotalInfo,VECTOR3* pPos,WORD wObjectKind)
 {
 	EObjectKind objectkind = eObjectKind_Monster;
-	
+
 	switch( wObjectKind )
 	{
 	case eObjectKind_SpecialMonster:
@@ -901,7 +901,7 @@ CMonster* CServerSystem::AddMonster(DWORD dwSubID, BASEOBJECT_INFO* pBaseObjectI
 		g_pAISystem.AddObject(
 			pMonster);
 	}
-	
+
 	CBattle* pBattle = BATTLESYSTEM->GetBattle(pMonster->GetBattleID());
 	if(pBattle->GetBattleKind() != eBATTLE_KIND_NONE)
 		BATTLESYSTEM->AddObjectToBattle(pBattle, pMonster);
@@ -919,14 +919,14 @@ CBossMonster* CServerSystem::AddBossMonster(DWORD dwSubID, BASEOBJECT_INFO* pBas
 	pBossMonster->InitMonster(pTotalInfo);
 	pBossMonster->SetGridID(pBaseObjectInfo->BattleID);
 	pBossMonster->SetInited();
-	
+
 	CCharMove::InitMove(pBossMonster,pPos);
-	
+
 
 	g_pUserTable->AddUser(pBossMonster,pBossMonster->GetID());
 	g_pAISystem.AddObject(pBossMonster);
 	BOSSMONMGR->SetBossInfo(pBossMonster);
-	
+
 	CBattle* pBattle = BATTLESYSTEM->GetBattle(pBossMonster->GetBattleID());
 	if(pBattle->GetBattleKind() != eBATTLE_KIND_NONE)
 		BATTLESYSTEM->AddObjectToBattle(pBattle, pBossMonster);
@@ -946,12 +946,12 @@ CFieldBossMonster* CServerSystem::AddFieldBossMonster(DWORD dwSubID, BASEOBJECT_
 	pFieldBossMonster->InitMonster(pTotalInfo);
 	pFieldBossMonster->SetGridID(pBaseObjectInfo->BattleID);
 	pFieldBossMonster->SetInited();
-	
+
 	CCharMove::InitMove(pFieldBossMonster,pPos);
 
 	g_pUserTable->AddUser(pFieldBossMonster,pFieldBossMonster->GetID());
-	g_pAISystem.AddObject(pFieldBossMonster); 
-		
+	g_pAISystem.AddObject(pFieldBossMonster);
+
 	CBattle* pBattle = BATTLESYSTEM->GetBattle(pFieldBossMonster->GetBattleID());
 	if(pBattle->GetBattleKind() != eBATTLE_KIND_NONE)
 		BATTLESYSTEM->AddObjectToBattle(pBattle, pFieldBossMonster);
@@ -971,13 +971,13 @@ CFieldSubMonster* CServerSystem::AddFieldSubMonster(DWORD dwSubID, BASEOBJECT_IN
 	pFieldSubMonster->InitMonster(pTotalInfo);
 	pFieldSubMonster->SetGridID(pBaseObjectInfo->BattleID);
 	pFieldSubMonster->SetInited();
-	
+
 	CCharMove::InitMove(pFieldSubMonster,pPos);
 
 	g_pUserTable->AddUser(pFieldSubMonster,pFieldSubMonster->GetID());
 
-	g_pAISystem.AddObject(pFieldSubMonster); 
-		
+	g_pAISystem.AddObject(pFieldSubMonster);
+
 	CBattle* pBattle = BATTLESYSTEM->GetBattle(pFieldSubMonster->GetBattleID());
 	if(pBattle->GetBattleKind() != eBATTLE_KIND_NONE)
 		BATTLESYSTEM->AddObjectToBattle(pBattle, pFieldSubMonster);
@@ -1001,7 +1001,7 @@ CNpc* CServerSystem::AddNpc(BASEOBJECT_INFO* pBaseObjectInfo,NPC_TOTALINFO* pTot
 	CCharMove::InitMove(pNpc,pPos);
 
 	g_pUserTable->AddUser(pNpc,pNpc->GetID());
-	
+
 	CBattle* pBattle = BATTLESYSTEM->GetBattle(pNpc->GetBattleID());
 	if(pBattle->GetBattleKind() != eBATTLE_KIND_NONE)
 		BATTLESYSTEM->AddObjectToBattle(pBattle, pNpc);
@@ -1017,7 +1017,7 @@ cSkillObject* CServerSystem::AddSkillObject(cSkillObject* pSkillObj,VECTOR3* pPo
 	CCharMove::InitMove(pSkillObj,pPos);
 
 	g_pUserTable->AddUser(pSkillObj,pSkillObj->GetID());
-	
+
 	return pSkillObj;
 }
 
@@ -1026,14 +1026,14 @@ CMapObject* CServerSystem::AddMapObject(DWORD Kind, BASEOBJECT_INFO* pBaseObject
 	ASSERT(g_pUserTable->FindUser(pBaseObjectInfo->dwObjectID) == NULL);
 
 	CMapObject* pMapObject = (CMapObject*)g_pObjectFactory->MakeNewObject((EObjectKind)Kind,0, pBaseObjectInfo);
-	
+
 	pMapObject->InitMapObject( pMOInfo );
 	pMapObject->SetGridID( pBaseObjectInfo->BattleID );
 	pMapObject->SetInited();
 	CCharMove::InitMove( pMapObject, pPos );
 
 	g_pUserTable->AddUser( pMapObject, pMapObject->GetID() );
-	
+
 	CBattle* pBattle = BATTLESYSTEM->GetBattle(pMapObject->GetBattleID());
 	if(pBattle->GetBattleKind() != eBATTLE_KIND_NONE)
 		BATTLESYSTEM->AddObjectToBattle( pBattle, pMapObject );
@@ -1054,7 +1054,7 @@ void CServerSystem::HandlingBeforeServerEND()
 	g_pUserTable->SetPositionHead();
 	CObject* pObject;
 	while( (pObject = g_pUserTable->GetData()) != NULL )
-	{	
+	{
 		if(pObject->GetObjectKind() == eObjectKind_Player)
 			g_pServerSystem->RemovePlayer(pObject->GetID(), FALSE);
 			//FALSE: ½ÇÁ¦·Î UserTable¿¡¼­´Â Áö¿ìÁö ¾Ê´Â´Ù.
@@ -1083,7 +1083,7 @@ void CServerSystem::HandlingBeforeServerEND()
 
 
 void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
-{	
+{
 	CPlayer* pPlayer = (CPlayer*)g_pUserTable->FindUser(dwPlayerID);
 	if(!pPlayer)
 		return;
@@ -1107,7 +1107,7 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 			if( pPlayer->GetBattle()->GetBattleKind() == eBATTLE_KIND_NONE &&
 				pPlayer->IsPenaltyByDie() )
 			{
-				pPlayer->ReviveLogInPenelty(); 
+				pPlayer->ReviveLogInPenelty();
 			}
 			else
 			{
@@ -1147,7 +1147,7 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 			}
 		}
 	}
-	else		
+	else
 	{
 		CCharMove::ReleaseMove(pPlayer);
 	}
@@ -1191,11 +1191,11 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 	if( map == 0 && pos_x == 0 && pos_z == 0 )
 	{
 		VECTOR3 pos;
-		
+
 		pPlayer->GetPosition( &pos );
 
 		map = GAMERESRCMNGR->GetLoadMapNum();
-		
+
 		pos_x = (DWORD)pos.x;
 		pos_z = (DWORD)pos.z;
 	}
@@ -1221,7 +1221,7 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 				pos.x = ppos->x + temp;
 				temp = rand() % 500 - 250;
 				pos.z = ppos->z + temp;
-				pos.y = 0;		
+				pos.y = 0;
 
 				map = GAMERESRCMNGR->GetLoadMapNum();
 				pos_x = ( DWORD )( pos.x );
@@ -1257,7 +1257,7 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 			pos.x = ppos->x + temp;
 			temp = rand() % 500 - 250;
 			pos.z = ppos->z + temp;
-			pos.y = 0;		
+			pos.y = 0;
 
 			map = GAMERESRCMNGR->GetLoadMapNum();
 			pos_x = ( DWORD )( pos.x );
@@ -1266,7 +1266,7 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 	}
 
 	if(g_pServerSystem->GetMapNum() == GTMAPNUM)
-	{		
+	{
 		VECTOR3* ppos = GAMERESRCMNGR->GetRevivePoint(GTRETURNMAPNUM);
 		VECTOR3 pos = {0};
 		int temp;
@@ -1274,7 +1274,7 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 		pos.x = ppos->x + temp;
 		temp = rand() % 500 - 250;
 		pos.z = ppos->z + temp;
-		
+
 		CharacterLogoutPointUpdate(
 			pPlayer->GetID(),
 			GTRETURNMAPNUM,
@@ -1283,7 +1283,7 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 
 		bUpdateLogPos = FALSE;
 	}
-	else if((SIEGEWARFAREMGR->IsSiegeWarfareZone(g_pServerSystem->GetMapNum(), FALSE) && 
+	else if((SIEGEWARFAREMGR->IsSiegeWarfareZone(g_pServerSystem->GetMapNum(), FALSE) &&
 				SIEGEWARFAREMGR->Is_CastleMap() == FALSE)
 			|| SIEGEDUNGEONMGR->IsSiegeDungeon(g_pServerSystem->GetMapNum()))
 	{
@@ -1327,7 +1327,7 @@ void CServerSystem::RemovePlayer(DWORD dwPlayerID, BOOL bRemoveFromUserTable )
 	{
 		DungeonMGR->Exit(pPlayer->GetID());
 	}
-	
+
 	if(PARTYMGR->CanUseInstantPartyMap(g_pServerSystem->GetMapNum()))
 	{
 		CParty* pParty = PARTYMGR->GetParty(pPlayer->GetPartyIdx());
@@ -1427,7 +1427,7 @@ CPet* CServerSystem::AddPet(BASEOBJECT_INFO& pBaseObjectInfo, const PET_OBJECT_I
 void CServerSystem::RemovePet( DWORD dwPetObjectID, BOOL bSummoned )
 {
 	CObject* pObject = g_pUserTable->FindUser(dwPetObjectID);
-	
+
 	if(!pObject)	return;
 
 	CCharMove::ReleaseMove(pObject);
@@ -1496,10 +1496,10 @@ void CServerSystem::RemoveNpc(DWORD dwNpcID)
 	CObject* pObject = g_pUserTable->FindUser(dwNpcID);
 	ASSERT(pObject);
 	if(!pObject)	return;
-	
+
 	CCharMove::ReleaseMove(pObject);
 	BATTLESYSTEM->DeleteObjectFromBattle(pObject);
-	
+
 	if(!pObject)	return;
 
 	g_pObjectFactory->ReleaseObject(pObject);
@@ -1511,7 +1511,7 @@ void CServerSystem::RemoveSkillObject(DWORD SkillObjectID)
 	CObject* pObject = g_pUserTable->FindUser(SkillObjectID);
 	//ASSERT(pObject);
 	if(!pObject)	return;
-	
+
 	CCharMove::ReleaseMove(pObject);
 	g_pObjectFactory->ReleaseObject(pObject);
 	g_pUserTable->RemoveUser(SkillObjectID);
@@ -1522,7 +1522,7 @@ void CServerSystem::RemoveMapObject( DWORD MapObjID )
 	CObject* pObject = g_pUserTable->FindUser(MapObjID);
 	ASSERT(pObject);
 	if(!pObject)	return;
-	
+
 	CCharMove::ReleaseMove(pObject);
 	BATTLESYSTEM->DeleteObjectFromBattle(pObject);
 
@@ -1561,7 +1561,7 @@ void CServerSystem::ReloadResourceData()	// case MP_CHEAT_RELOADING:
 		{
 			RemoveNpc(pObject->GetID());
 		}
-		
+
 	}
 
 	g_pAISystem.RemoveAllList();
@@ -1810,7 +1810,7 @@ void __stdcall OnConnectServerFail(void* pVoid)
 	{
 		g_Console.LOG(4, "Failed to Connect to the Server : %s, %d", info->szIPForServer, info->wPortForServer);
 		BOOTMNGR->RemoveBootList(g_pServerTable, info->wPortForServer);
-	}	
+	}
 }
 
 // 080813 LUJ, ¼öÁ¤µÈ inetwork È£Ãâ Çü½Ä¿¡ µû¶ó º¯°æ
@@ -1877,7 +1877,7 @@ void __stdcall ReceivedMsgFromServer(DWORD dwConnectionIndex,char* pMsg,DWORD dw
 {
 	MSGROOT* pTempMsg = reinterpret_cast<MSGROOT*>(pMsg);
 	ASSERT(pTempMsg->Category < MP_MAX);
-	
+
 	if( g_pServerMsgParser[pTempMsg->Category] == NULL ||
 		pTempMsg->Category >= MP_MAX ||
 		pTempMsg->Category == 0)
@@ -1908,7 +1908,7 @@ void __stdcall ReceivedMsgFromUser(DWORD dwConnectionIndex,char* pMsg,DWORD dwLe
 	MSGROOT* pTempMsg = reinterpret_cast<MSGROOT*>(pMsg);
 	ASSERT(pTempMsg->Category < MP_MAX);
 	ASSERT(g_pUserMsgParser[pTempMsg->Category]);
-	
+
 	if( g_pUserMsgParser[pTempMsg->Category] == NULL ||
 		pTempMsg->Category >= MP_MAX ||
 		pTempMsg->Category == 0)
@@ -2017,7 +2017,7 @@ void ButtonToggleProcessTime()
 
 void OnCommand(char* szCommand)
 {
-	if (stricmp(szCommand, "MONSTERMETER_LOAD_REWARD_SCRIPT") == 0 || 
+	if (stricmp(szCommand, "MONSTERMETER_LOAD_REWARD_SCRIPT") == 0 ||
 		stricmp(szCommand, "MM_LRS") == 0)
 	{
 		g_csMonstermeterManager.LoadScriptFileData();
@@ -2039,7 +2039,7 @@ void OnCommand(char* szCommand)
 
 BOOL LoadEventRate(char* strFileName)
 {
-	for(int i=0; i<eEvent_Max; ++i)	
+	for(int i=0; i<eEvent_Max; ++i)
 	{
 		gEventRate[i] = 1.f;
 		gEventRateFile[i] = 1.f;
@@ -2051,14 +2051,14 @@ BOOL LoadEventRate(char* strFileName)
 		return FALSE;
 
 	char Token[256];
-	
+
 // RaMa -04.11.24
 	while( !file.IsEOF() )
 	{
 		file.GetString(Token);
 
-		if(strcmp(Token,"#EXP") == 0)	
-		{			
+		if(strcmp(Token,"#EXP") == 0)
+		{
 			//gExpRate = file.GetFloat();
 			gEventRateFile[eEvent_ExpRate] = file.GetFloat();
 		}
@@ -2110,13 +2110,13 @@ BOOL LoadEventRate(char* strFileName)
 		else if(strcmp(Token,"#SKILLEXPRATE") == 0)
 		{
 			gEventRateFile[eEvent_SkillExp] = file.GetFloat();
-		}		
+		}
 	}
 
 
 	file.Release();
 
-	for(i=0; i<eEvent_Max; ++i)	
+	for(i=0; i<eEvent_Max; ++i)
 		gEventRate[i] = gEventRateFile[i];
 
 	return TRUE;

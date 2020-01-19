@@ -64,7 +64,7 @@ enum
 #define GETITEM_FLAG_INVENTORY	0x00000001
 #define GETITEM_FLAG_WEAR		0x00000002
 
-class CPlayer : public CObject  
+class CPlayer : public CObject
 {
 private:
 	DWORD m_UniqueIDinAgent;
@@ -113,7 +113,7 @@ private:
 	BOOL		m_bPenaltyByDie;
 	BOOL		m_bReadyToRevive; //죽은 상태에서만 씀
 	CYHHashTable<CMonster> m_FollowMonsterList;
-	
+
 	/// 전투 능력 수치
 	float		mAccuracy;
 	float		mAvoid;
@@ -209,12 +209,12 @@ private:
 	CInventorySlot						m_InventorySlot;
 	CWearSlot							m_WearSlot;
 	CStorageSlot						m_StorageSlot;
-	CItemSlot							m_ShopItemSlot;			// ItemMall용	
+	CItemSlot							m_ShopItemSlot;			// ItemMall용
 	CInventoryPurse						m_InventoryPurse;
 	CPurse								m_StoragePurse;
 	/// 인벤토리 관련 클래스
 	friend class						CInventoryPurse;
-	
+
 	/// 초기화 관련 변수
 	BOOL								m_bGotWarehouseItems;
 	sEXCHANGECONTAINER					m_ExchangeContainer;
@@ -357,7 +357,7 @@ public:
 	DWORD				GetStrength();
 	DWORD				GetDexterity();
 	DWORD				GetIntelligence();
-	
+
 	void				SetVitality( DWORD val );
 	void				SetWisdom( DWORD val );
 	void				SetStrength( DWORD val );
@@ -377,8 +377,8 @@ public:
 	void				SetMaxMana( DWORD val );
 
 	// 080625 LYW --- Player : 생명력 세팅 함수 수정.
-	// 캐릭터가 죽은 상태에서 강종이나 튕김 현상이 발생 할 때, 
-	// 캐릭터의 생명력/마나 30%를 복구해 주어야 한다. 그런데 상태가 죽은 상태면, 
+	// 캐릭터가 죽은 상태에서 강종이나 튕김 현상이 발생 할 때,
+	// 캐릭터의 생명력/마나 30%를 복구해 주어야 한다. 그런데 상태가 죽은 상태면,
 	// 기존 함수는 return 처리를 하므로, 강제로 복구 여부를 세팅할 수 있는 함수를 추가한다.
 	void SetLifeForce( DWORD Life, BYTE byForce, BOOL bSendMsg = TRUE) ;
 	void SetManaForce(DWORD Mana, BYTE byForce, BOOL bSendMsg = TRUE) ;
@@ -387,7 +387,7 @@ public:
 	virtual void		SetLife( DWORD Life, BOOL bSendMsg = TRUE );
 
 	virtual DWORD		GetMana();
-	virtual void		SetMana( DWORD valb, BOOL SendMsg = TRUE );	
+	virtual void		SetMana( DWORD valb, BOOL SendMsg = TRUE );
 
 	virtual DWORD		DoGetMaxLife();
 	virtual DWORD		DoGetMaxMana();
@@ -454,7 +454,7 @@ public:
 	void						AddQuest(CQuestBase*);
 	BOOL						SetQuestState(DWORD QuestIdx, QSTATETYPE);
 	CQuestGroup&				GetQuestGroup()	{ return m_QuestGroup; }
-	
+
 	/// 몬스터
 	BOOL						AddFollowList( CMonster * pMob );
 	void						RemoveFollowList( DWORD ID );
@@ -536,7 +536,7 @@ public:
 	virtual DWORD	ManaDamage( CObject* pAttacker, RESULTINFO* pDamageInfo );
 
 	virtual void	StateProcess();
-	
+
 	/// 퀘스트 프로세스
 	void			QuestProcess();
 
@@ -551,10 +551,10 @@ public:
 	void			SetNormalExit() { m_bNormalExit = TRUE; }
 	BOOL			IsNormalExit() { return m_bNormalExit; }
 	void			UpdateLogoutToDB(BOOL val = TRUE);
-	
+
 	void			SetEmergency() { mIsEmergency = TRUE; }
 	BOOL			IsEmergency() { return mIsEmergency; }
-	
+
 	void			SetMapMoveInfo( MAPTYPE map, DWORD pos_x, DWORD pos_z )
 	{
 		mTargetMap = map;
@@ -595,33 +595,33 @@ public:
 	// 080703 LUJ, 양손에 장비한 무기를 종합하여 타입을 반환한다
 	eWeaponAnimationType				GetWeaponAniType();
 	eArmorType							GetArmorType( EWEARED_ITEM ) const;
-	
+
 	BOOL								RemoveItem(DWORD nItemID, DWORD nItemNum, eLogitemmoney eLogKind);
-	
+
 	MONEYTYPE							SetMoney( MONEYTYPE ChangeValue, BYTE bOper, BYTE MsgFlag = 0, eITEMTABLE tableIdx = eItemTable_Inventory, BYTE LogType = 0, DWORD TargetIdx = 0 );
 	MONEYTYPE							GetMoney( eITEMTABLE tableIdx = eItemTable_Inventory );
 	MONEYTYPE							GetMaxPurseMoney( eITEMTABLE TableIdx );
 	void								SetMaxPurseMoney( eITEMTABLE TableIdx, DWORD MaxMoney );
 	BOOL								IsEnoughAdditionMoney( MONEYTYPE money, eITEMTABLE tableIdx = eItemTable_Inventory );
-	void								RSetMoney( MONEYTYPE money, BYTE flag );	
+	void								RSetMoney( MONEYTYPE money, BYTE flag );
 	void								SetExchangeContainer( sEXCHANGECONTAINER* ExchangeContainer ) { m_ExchangeContainer = *ExchangeContainer; }
 	sEXCHANGECONTAINER*					GetExchangeContainer() { return &m_ExchangeContainer; }
-	
+
 	/// 노점상
 	void								SetGuestStall( cStreetStall* pStall ) { m_pGuetStall = pStall; }
 	cStreetStall*						GetGuestStall() { return m_pGuetStall; }
 	void								SetStreetStallTitle( char* title );
 	void								GetStreetStallTitle( char* title );
-	
+
 	/// 아이템 정보 관련 함수----------------------------------------------/
 	///--------------------------------------------------------------------/
 
-	
+
 	///--------------------------------------------------------------------/
 	/// 스킬 정보 관련 함수------------------------------------------------/
 
 	// 080509 LUJ, 스킬 쿨타임 체크
-public:	
+public:
 	// 080509 LUJ, 스킬 쿨타임이 지나지 않았으면 참을 반환한다
 	// 080516 LUJ, 실패 카운트 체크를 저장하기 위해 상수 선언 제거
 	BOOL IsCoolTime( const ACTIVE_SKILL_INFO& );
@@ -752,7 +752,7 @@ public:
 	// 080507 KTH --
 	void							SetFarmAnimalFeedRetryTime(UINT nTime)	{ m_stFarmInfo.nAnimalFeedRetryTime = nTime; m_stFarmInfo.nAnimalFeedRetryTimeTick = gCurTime; }
 	void							SetFarmAnimalCleanRetryTime(UINT nTime)	{ m_stFarmInfo.nAnimalCleanRetryTime = nTime; m_stFarmInfo.nAnimalCleanRetryTimeTick = gCurTime; }
-	
+
 	// 070705 세트 아이템 능력 관리
 public:
 	// 071207 LUJ 세트 정보 초기화
@@ -775,12 +775,12 @@ public:
 private:
 	typedef std::list<SKILL_BASE> JobSkillList;
 	JobSkillList m_JobSkillList;
-	
+
 	// 071005 웅주, 쿨타임
 public:
 	BOOL AddCoolTime(DWORD coolTimeGroupIndex, DWORD coolTime);
 	void RemoveCoolTime( DWORD coolTimeGroupIndex);
-	
+
 private:
 	void MoneyUpdate(MONEYTYPE);
 	void UpdateGravity();
@@ -809,7 +809,7 @@ public:
 
 	// 080213 KTH -- ClearInventory
 	BOOL ClearInventory();
-	
+
 	// 071206 KTH -- 스킬과 스텟이 초기화 중인지 검사.
 	BOOL	IsResetSkill()	{	return m_bResetSkill;	}
 	void	SetResetSkill( BOOL bResetSkill )	{	m_bResetSkill = bResetSkill;	}
@@ -829,8 +829,8 @@ public:
 	// 071210 KTH -- 확장인벤토리 기능
 	WORD	GetInventoryExpansion()							{ return m_HeroCharacterInfo.wInventoryExpansion; }
 	// 071225 KTH -- (Fix) 확장 인벤토리의 갯수가 변경될 경우 확장된 수만큼 슬롯의 갯수를 다시 셋팅하여 준다.
-	void	SetInventoryExpansion(WORD InventoryExpansion)	{ 
-																m_HeroCharacterInfo.wInventoryExpansion = InventoryExpansion; 
+	void	SetInventoryExpansion(WORD InventoryExpansion)	{
+																m_HeroCharacterInfo.wInventoryExpansion = InventoryExpansion;
 																m_InventorySlot.SetSlotNum( (POSTYPE) ( SLOT_INVENTORY_NUM + GetInventoryExpansionSize() ));
 															}
 	BOOL	IncreaseInventoryExpansion();
@@ -888,7 +888,7 @@ protected:
 	EXPTYPE m_dwFishingExp;					// 낚시숙련도
 
 	DWORD m_dwFishPoint;					// 물고기포인트
-	
+
 public:
 	std::list<DWORD> m_lstGetFishList;		// 미션중 최근 낚은 3마리 고기, FM(FishingMission)
 
@@ -969,7 +969,7 @@ public:
 	WORD					GetFireCount()				{return m_wFireCount;}
 	DWORD					GetLastCookTime()			{return m_dwLastCookTime;}
 	stRecipeLv4Info*		GetMasterRecipe(POSTYPE pos);
-	
+
 	int						CanAddRecipe(DWORD dwRecipe);
 	void					ProcessRecipeTimeCheck(DWORD dwElapsedTime);
 
@@ -991,7 +991,7 @@ private:
 	DWORD mMountedVehicleIndex;
 
 public:
-	// 091123 공성전 워터시드 사용중 플레그 추가 
+	// 091123 공성전 워터시드 사용중 플레그 추가
 	void SetUsingWaterSeedFlag( BOOL bFlag ) { m_HeroCharacterInfo.bUsingWaterSeed = bFlag ; }
 
 
@@ -1002,7 +1002,7 @@ private:
 public:
 	void				SetHouseName(char* pHouseName)	{strcpy(m_szHouseName, pHouseName);}
 	char*				GetHouseName()					{return m_szHouseName;}
-	
+
 	// 100211 ONS 부활대상자가 수락한 경우 부활처리를 실행한다.
 private:
 	DWORD		m_dwCurrentResurrectIndex;					// 현재 부활스킬 응답중일경우, 해당 스킬 인덱스를 저장한다.
