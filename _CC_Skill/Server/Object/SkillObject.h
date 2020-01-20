@@ -79,6 +79,6 @@ public:
 	const VECTOR3& GetSkillDir() const { return m_SkillDir; }
 	DWORD	GetSkillObjectId() { return mSkillObjectInfo.skillObjectId; }
 // --- skr 16012020
-  BOOL isRelifeAllow(){ return RelifeAllow; }
-  void setRelifeAllow( BOOL aboll ){ RelifeAllow = aboll; }
+  virtual BOOL isRelifeAllow(){ return RelifeAllow; }
+  virtual void setRelifeAllow( BOOL aboll ){ RelifeAllow = aboll; }
 };

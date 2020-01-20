@@ -779,7 +779,8 @@ SKILL_RESULT cSkillManager::OnSkillStartSyn(MSG_SKILL_START_SYN* pmsg, ITEMBASE*
 	pSObj->SetBattle( pOperator->GetBattleID(), pOperator->GetBattleTeam() );
 	pSObj->SetGridID( pOperator->GetGridID() );
 // --- skr 16012020
-  pSObj->setRelifeAllow( pSkillInfo->isAllowByRelife() );
+  //pSkillInfo->isAllowByRelifeEX();
+  pSObj->setRelifeAllow( pSkillInfo->isAllowByRelifeEX() );
 
 	/// Å×ÀÌºí¿¡ µî·Ï
 	m_SkillObjectTable.Add( pSObj, pSObj->GetID() );

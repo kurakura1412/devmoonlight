@@ -14,6 +14,7 @@ public:
 private:
 	Type mType;
 // --- skr 16012020
+protected:
   BOOL RelifeAllow;
 
 public:
