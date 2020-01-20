@@ -1,4 +1,4 @@
-#Msg	177001
+#Msg	197001
 {
-ReLife: dont give up just yet. I know you can do better. I bestow you a change to revenge!
+ReLife: dont give up just yet. I know you can do better. I bestow you a chance to revenge!
 }

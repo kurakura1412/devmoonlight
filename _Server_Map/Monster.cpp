@@ -386,6 +386,11 @@ BOOL CMonster::SetTObject(CObject * pNewTPlayer)
 					speechInfo->SpeechIndex );
 			}
 
+// --- skr 20012020
+      if( player->IsRelifeON() ){
+        break;
+      }
+
 			// ¿ëº´ÀÌ µµ¿ï ¼ö ÀÖµµ·Ï Å¸°Ù¿¡ ÀâÈ÷´Â ¼ø°£ ¾î±×·Î ¼öÄ¡°¡ Àû¿ëµÉ ¼ö ÀÖµµ·ÏÇÑ´Ù
 			player->AddToAggroed(
 				GetID());

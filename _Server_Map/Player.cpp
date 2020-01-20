@@ -1674,7 +1674,8 @@ void CPlayer::RevivePresentSpot()
 	if( curLevel >= 10 && m_bNoExpPenaltyByPK == FALSE )
 	{
 		RevivePenalty(FALSE) ;
-		RevivePenalty(TRUE) ;
+// --- skr 20012020
+		//RevivePenalty(TRUE) ;
 
 		if( !g_csDateManager.IsChallengeZoneHere() )
 		{
@@ -2276,7 +2277,8 @@ void CPlayer::ReviveLogInPenelty()
 	if( GetLevel() >= 10 && m_bNoExpPenaltyByPK == FALSE )
 	{
 		RevivePenalty(FALSE) ;
-		RevivePenalty(TRUE) ;
+// --- skr 20012020
+		//RevivePenalty(TRUE) ;
 
 		if( !g_csDateManager.IsChallengeZoneHere() )
 		{
@@ -3296,7 +3298,7 @@ DWORD CPlayer::Damage(CObject* pAttacker,RESULTINFO* pDamageInfo)
 	DWORD life = GetLife();
 
 // --- skr 12/01/2020
-  if( IsRelifeON() ){ return life; }
+  //if( IsRelifeON() ){ return life; }
 
 	DWORD beforelife = life;
 
@@ -5593,9 +5595,9 @@ void CPlayer::SetRelifeStart()
     SKILLMGR->BuffSkillStart(
       GetID(),
       RELIFEEMGR->getBuffIdx(),
-      RELIFEEMGR->getBuffRemainTime();
+      RELIFEEMGR->getBuffRemainTime(),
       RELIFEEMGR->getBuffCount()
-      )
+      );
     }
   }
 }

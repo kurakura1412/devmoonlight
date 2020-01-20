@@ -4,11 +4,6 @@ class cSkillObject;
 
 class cSkillInfo
 {
-private:
-	Type mType;
-// --- skr 16012020
-  BOOL RelifeAllow;
-
 public:
 	enum Type
 	{
@@ -16,6 +11,13 @@ public:
 		TypeActive,
 		TypeBuff,
 	};
+private:
+	Type mType;
+// --- skr 16012020
+  BOOL RelifeAllow;
+
+public:
+
 	Type GetType() const { return mType; }
 // --- skr 16012020
   BOOL isAllowByRelife(){ return RelifeAllow; }

@@ -1993,3 +1993,14 @@ const cBuffSkillInfo* cSkillManager::GetBuffInfo(DWORD skillIndex)
 
 	return 0;
 }
+
+// --- skr 20012020
+cBuffSkillInfo* cSkillManager::GetBuffInfoEX(DWORD skillIndex)
+{
+  if(const cSkillInfo* const skillInfo = GetSkillInfo(skillIndex))
+	{
+		return cSkillInfo::TypeBuff == skillInfo->GetType() ? (cBuffSkillInfo*)skillInfo : 0;
+	}
+
+	return 0;
+}

@@ -23,5 +23,5 @@ public:
 	virtual DWORD GetIndex() const { return mInfo.Index; }
 	virtual LEVELTYPE GetLevel() const { return mInfo.Level; }
 // --- skr 12/01/2020
-	virtual void SetDelay( DWORD anum);
+	void SetDelay( DWORD anum);
 };

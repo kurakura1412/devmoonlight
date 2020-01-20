@@ -1,11 +1,22 @@
 // ReLife feature that allow player invincible for period of time after revival.
 // enable them to counter enemies attacks.
 
+#include "stdafx.h"
 #include <vector>
-#include "MHFile.h"
-#include "..\[CC]Header\GameResourceManager.h"
+#include "[lib]yhlibrary/HashTable.h"
+#include "protocol.h"
+#include "CommonDefine.h"
+#include "CommonGameDefine.h"
+#include "ServerGameDefine.h"
+#include "CommonStruct.h"
+#include "ServerGameStruct.h"
+#include "CommonCalcFunc.h"
+//#include "CommonGameFunc.h"
+#include "../[CC]Header/GameResourceManager.h"
 #include "../[CC]Skill/Server/Info/BuffSkillInfo.h"
 #include "../[CC]Skill/Server/Manager/SkillManager.h"
+
+#include "MHFile.h"
 #include "Relife.h"
 
 CRelife::CRelife()
@@ -49,14 +60,14 @@ void CRelife::LoadSetup()
 			break;
 		if(tempBuf[0] == '@')
 		{
-			file.GetLine(tempBuf, 256);
+			file.GetLineX(tempBuf, 256);
 			continue;
 		}
-		else if(0==strcmp(string, "#RELIFE_TIME"))
+		else if(0==strcmp(tempBuf, "#RELIFE_TIME"))
 		{
 			relife_timeup = file.GetDword();
 		}
-		else if(0==strcmp(string, "#EXCLUDE_MAP"))
+		else if(0==strcmp(tempBuf, "#EXCLUDE_MAP"))
 		{
 			mapnumme = file.GetDword();
 			if( mapnumme == dwmapnum ){
@@ -64,12 +75,12 @@ void CRelife::LoadSetup()
 				break;
 			}
 		}
-		else if(0==strcmp(string, "#ALLOWED_SKILL_A"))
+		else if(0==strcmp(tempBuf, "#ALLOWED_SKILL_A"))
 		{
 			alloskillA = file.GetDword();
 			Allowed_skill.push_back( alloskillA );
 		}
-		else if(0==strcmp(string, "#ALLOWED_SKILL_RANGE"))
+		else if(0==strcmp(tempBuf, "#ALLOWED_SKILL_RANGE"))
 		{
 			alloskillF = file.GetDword();
 			alloskillE = file.GetDword();
@@ -78,26 +89,26 @@ void CRelife::LoadSetup()
 			stuff.dwEnd = alloskillE;
 			Allowed_skill_range.push_back(stuff);
 		}
-    else if(0==strcmp(string, "#RELIFE_BUFF_ID"))
+    else if(0==strcmp(tempBuf, "#RELIFE_BUFF_ID"))
 		{
       DWORD sklidx = file.GetDword();
-      cBuffSkillInfo* sklbuff = SKILLMGR->GetBuffInfo(sklidx);
+      cBuffSkillInfo* sklbuff = SKILLMGR->GetBuffInfoEX(sklidx);
       if( sklbuff ){
         sklbuff->SetDelay( relife_timeup );
         relife_icon = TRUE;
         relifebuffidx = sklidx;
       }
     }
-    else if(0==strcmp(string, "#RELIFE_BUFF_COUNT"))
+    else if(0==strcmp(tempBuf, "#RELIFE_BUFF_COUNT"))
 		{
       relife_buff_count = file.GetDword();
     }
-    else if(0==strcmp(string, "#ALLOWED_BUFF_A"))
+    else if(0==strcmp(tempBuf, "#ALLOWED_BUFF_A"))
 		{
 			allobuffA = file.GetDword();
 			Allowed_buff.push_back( alloskillA );
 		}
-		else if(0==strcmp(string, "#ALLOWED_BUFF_RANGE"))
+		else if(0==strcmp(tempBuf, "#ALLOWED_BUFF_RANGE"))
 		{
 			allobuffF = file.GetDword();
 			allobuffE = file.GetDword();

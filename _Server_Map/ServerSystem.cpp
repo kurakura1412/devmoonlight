@@ -847,6 +847,9 @@ CPlayer* CServerSystem::AddPlayer(DWORD dwPlayerID,DWORD dwAgentNum,DWORD Unique
 		}
 	}
 
+// --- skr 20012020
+	pPlayer->SetRelifeTimer( RELIFEEMGR->getBuffRemainTime() );
+
 	return pPlayer;
 }
 
