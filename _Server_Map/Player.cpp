@@ -99,7 +99,7 @@ m_SkillTree(new cSkillTree)
 	m_dweFamilyRewardExp = 0;
 	m_byCurFamilyMemCnt	 = 0;
 	m_dwCurrentResurrectIndex = 0;
-	// skr -- relife
+// --- skr : relife
  	RelifeON = FALSE;
 	RelifeTimer = 0;
   RelifeStartTime = 0;
@@ -199,7 +199,6 @@ void CPlayer::InitClearData()
 	}
 	m_lstGetFishList.clear();
 
-
 	m_wFishingLevel = 1;
 	m_dwFishingExp = 0;
 	m_dwFishPoint = 0;
@@ -231,6 +230,10 @@ void CPlayer::InitClearData()
 
 	m_dwConsignmentTick = 0;
 	ForbidChatTime = 0;
+
+// --- skr 22012020
+	RelifeON = FALSE;
+	RelifeTimer = 0;
 }
 
 BOOL CPlayer::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseObjectInfo)
@@ -307,6 +310,10 @@ BOOL CPlayer::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseObject
 	ZeroMemory( &m_YYManaRecoverTime, sizeof(m_YYManaRecoverTime) );
 	m_ManaRecoverDirectlyAmount = 0;
 
+// --- skr 22012020
+	RelifeON = FALSE;
+	RelifeTimer = 0;
+
 	return TRUE;
 }
 void CPlayer::Release()
@@ -379,7 +386,6 @@ void CPlayer::Release()
 
 		m_QuestList.RemoveAll();
 	}
-
 
 	m_InventoryPurse.Release();
 	m_StoragePurse.Release();
@@ -866,19 +872,15 @@ void CPlayer::SetLifeForce(DWORD Life, BYTE byForce, BOOL bSendMsg)
 		if(GetState() == eObjectState_Die) return ;
 	}
 
-
 	// 현재 캐릭터 레벨에 맞는 최대 생명력을 받는다.
 	DWORD maxlife = 0 ;
 	maxlife = GetMaxLife() ;
 
-
 	// 생명력 수치 유효 체크.
 	if(Life > maxlife) Life = maxlife ;
 
-
 	// 인자로 넘어온 생명력이 기존 생명력 보다 작으면, return 처리를 한다.
 	if( m_HeroCharacterInfo.Life >= Life ) return ;
-
 
 	// 기존 생명력 / 인자로 넘어온 생명력이 같지 않으면,
 	if(m_HeroCharacterInfo.Life != Life)
@@ -905,14 +907,9 @@ void CPlayer::SetLifeForce(DWORD Life, BYTE byForce, BOOL bSendMsg)
 			Life);
 	}
 
-
 	// 캐릭터의 생명력을 세팅한다.
 	m_HeroCharacterInfo.Life = Life ;
 }
-
-
-
-
 
 void CPlayer::SetLife(DWORD val,BOOL bSendMsg)
 {
@@ -965,10 +962,6 @@ void CPlayer::SendLifeToParty(DWORD val)
 	}
 }
 
-
-
-
-
 //-------------------------------------------------------------------------------------------------
 //	NAME : SetLifeForce
 //	DESC : 080625 LYW
@@ -985,19 +978,15 @@ void CPlayer::SetManaForce(DWORD Mana, BYTE byForce, BOOL bSendMsg)
 		if(GetState() == eObjectState_Die) return ;
 	}
 
-
 	// 캐릭터의 현재 레벨상 최대 마나 수치를 받는다.
 	DWORD MaxMana = 0 ;
 	MaxMana = GetMaxMana() ;
 
-
 	// 인자로 넘어온 마나의 유효 범위를 체크.
 	if(Mana > MaxMana) Mana = MaxMana ;
 
-
 	// 인자로 넘어온 마나량이 기존 마나량 보다 작으면, return 처리를 한다.
 	if( m_HeroInfo.Mana >= Mana ) return ;
-
 
 	// 기존마나 / 인자로 넘어온 마나가 같지 않으면,
 	if( m_HeroInfo.Mana != Mana)
@@ -1018,14 +1007,9 @@ void CPlayer::SetManaForce(DWORD Mana, BYTE byForce, BOOL bSendMsg)
 			Mana);
 	}
 
-
 	// 캐릭터의 마나를 세팅한다.
 	m_HeroInfo.Mana = Mana ;
 }
-
-
-
-
 
 void CPlayer::SetMana(DWORD val,BOOL bSendMsg)
 {
@@ -1230,10 +1214,8 @@ void CPlayer::SetSkillPoint( DWORD point, BYTE byForced )
 	ASSERT(byForced <= TRUE) ;
 	if(byForced > TRUE) return ;
 
-
 	// 스킬 포인트 업데이트.
 	GetHeroTotalInfo()->SkillPoint += point;
-
 
 	// 클라이언트 전송
 	MSG_DWORD msg;
@@ -1245,15 +1227,12 @@ void CPlayer::SetSkillPoint( DWORD point, BYTE byForced )
 
 	SendMsg(&msg, sizeof(msg));
 
-
 	// DB 업데이트
 	SkillPointUpdate( GetID(), GetSkillPoint() );
-
 
 	// 071129 LYW --- Player : 누적 스킬 포인트 업데이트.
 	//DB_UpdateAccumulateSkillPoint(GetID(), FALSE, point) ;
 	DB_UpdateAccumulateSkillPoint(GetID(), byForced, point) ;
-
 
 	// 071114 웅주. 로그
 	{
@@ -1579,7 +1558,6 @@ EXPTYPE CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// 제자리 부활
 		msg.dweData2	= GoalExp-dwExp ;										// 플레이어의 경험치를 세팅한다.
 		msg.dweData3	= (DWORDEX)PenaltyNum ;									// 패널티 수치를 세팅한다.
 
-
 		if( bAdditionPenalty )
 		{
 			msg.dweData4		= TRUE ;												// 추가 경험치 하락 여부를 TRUE로 세팅한다.
@@ -1605,7 +1583,6 @@ EXPTYPE CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// 제자리 부활
 
 	return PenaltyExp;
 }
-
 
 void CPlayer::RevivePresentSpot()
 {
@@ -1863,7 +1840,6 @@ void CPlayer::ReviveLogIn()
 		return ;
 	}
 
-
 	// 루팅 상태라면, 부활 실패처리를 한다.
 	if( LOOTINGMGR->IsLootedPlayer( GetID() ) )
 	{
@@ -1875,7 +1851,6 @@ void CPlayer::ReviveLogIn()
 
 		return ;
 	}
-
 
 	// 아웃처리가 시작 되었으면, 실패 처리를 한다.
 	if( IsExitStart() )
@@ -1915,10 +1890,6 @@ void CPlayer::ReviveLogIn()
 	}
 }
 
-
-
-
-
 // 081210 LYW --- Player : 공성전 길드 던전에서의 부활 문제로 인해 두가지 함수를 추가한다.
 //-------------------------------------------------------------------------------------------------
 //	NAME		: ReviveLogIn_Normal
@@ -1931,7 +1902,6 @@ void CPlayer::ReviveLogIn_Normal()
 	// 부활창이 필요하다고 세팅한다.
 	m_bNeedRevive = TRUE ;
 
-
 	// 부활 메시지를 세팅한다.
 	MOVE_POS msg ;
 
@@ -1940,7 +1910,6 @@ void CPlayer::ReviveLogIn_Normal()
 
 	msg.dwObjectID	= GetID() ;
 	msg.dwMoverID	= GetID() ;
-
 
 	// 부활 위치를 세팅한다.
 	VECTOR3* ppos ;
@@ -1969,10 +1938,8 @@ void CPlayer::ReviveLogIn_Normal()
 
 	PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg)) ;
 
-
 	// Player의 죽음 상태를 해제한다.
 	OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die) ;
-
 
 	// 부활 패널티를 적용한다.
 	const LEVELTYPE curLevel = GetLevel() ;
@@ -1988,12 +1955,10 @@ void CPlayer::ReviveLogIn_Normal()
 		}
 	}
 
-
 	// 길드 토너먼트 예외 처리를 한다.
 	m_bDieForGFW = FALSE ;
 	m_dwRespawnTimeOnGTMAP = 0 ;
 	m_dwImmortalTimeOnGTMAP = 0 ;
-
 
 	// 상황에 따른 생명력을 세팅한다.
 	DWORD CurLife = GetMaxLife() ;
@@ -2013,7 +1978,6 @@ void CPlayer::ReviveLogIn_Normal()
 
 	m_HeroCharacterInfo.Life = nReviveVal ;
 
-
 	// 상황에 따른 마나력을 세팅한다.
 	DWORD MaxMana = GetMaxMana() ;
 
@@ -2029,14 +1993,12 @@ void CPlayer::ReviveLogIn_Normal()
 		}
 	}
 
-
 	// 길드 토너먼트 예외를 처리한다.
 	if(g_pServerSystem->GetMapNum() == GTMAPNUM)
 	{
 		WORD wCode = GetJobCodeForGT() ;
 		m_dwImmortalTimeOnGTMAP = GTMGR->GetImmortalTimeByClass(wCode) ;
 	}
-
 
 	// 무적상태 처리를 한다.
 	OBJECTSTATEMGR_OBJ->StartObjectState(this,eObjectState_Immortal,0) ;
@@ -2072,10 +2034,6 @@ void CPlayer::ReviveLogIn_Normal()
 
 }
 
-
-
-
-
 //-------------------------------------------------------------------------------------------------
 //	NAME		: ReviveLogIn_GuildDungeon
 //	DESC		: 공성 길드던전에서의 안전지대 부활 함수.
@@ -2089,7 +2047,6 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 	// 부활창이 필요하다고 세팅한다.
 	m_bNeedRevive = TRUE ;
 
-
 	// 부활 메시지를 세팅한다.
 	MOVE_POS msg ;
 
@@ -2098,7 +2055,6 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 
 	msg.dwObjectID	= GetID() ;
 	msg.dwMoverID	= GetID() ;
-
 
 	// Player가 루쉔성 길드 소속인지 제뷘성 길드 소속인지 확인한다.
 	VillageWarp* pRevivePoint	= NULL ;
@@ -2159,7 +2115,6 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 		}
 	}
 
-
 	// 부활 위치를 세팅한다.
 	VECTOR3 pos ;
 	int temp ;
@@ -2192,10 +2147,8 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 
 	PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg)) ;
 
-
 	// Player의 죽음 상태를 해제한다.
 	OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die) ;
-
 
 	// 부활 패널티를 적용한다.
 	const LEVELTYPE curLevel = GetLevel() ;
@@ -2211,7 +2164,6 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 		}
 	}
 
-
 	// 상황에 따른 생명력을 세팅한다.
 	DWORD CurLife = GetMaxLife() ;
 	int nReviveVal = (int)(CurLife*0.3) ;
@@ -2225,7 +2177,6 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 
 	m_HeroCharacterInfo.Life = nReviveVal ;
 
-
 	// 상황에 따른 마나력을 세팅한다.
 	DWORD MaxMana = GetMaxMana() ;
 
@@ -2234,7 +2185,6 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 	{
 		SetMana(dwManaRate) ;
 	}
-
 
 	// 무적상태 처리를 한다.
 	OBJECTSTATEMGR_OBJ->StartObjectState(this,eObjectState_Immortal,0) ;
@@ -2267,10 +2217,6 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 // --- skr  12/01/2020
   SetRelifeStart();
 }
-
-
-
-
 
 void CPlayer::ReviveLogInPenelty()
 {
@@ -2313,7 +2259,6 @@ void CPlayer::ReviveLogInPenelty()
 
 	m_bDieForGFW = FALSE;
 }
-
 
 void CPlayer::DoDie(CObject* pAttacker)
 {
@@ -2489,7 +2434,6 @@ float CPlayer::DoGetMoveSpeed()
 	return max( 0, speed );
 }
 
-
 void CPlayer::SetInitedGrid()
 {
 	MSGBASE msg;
@@ -2615,7 +2559,6 @@ BOOL CPlayer::IsEnoughAdditionMoney(MONEYTYPE money, eITEMTABLE tableIdx )
 	return pPurse->IsAdditionEnough( money );
 }
 
-
 MONEYTYPE CPlayer::GetMaxPurseMoney(eITEMTABLE TableIdx)
 {
 	CPurse* pPurse = m_ItemContainer.GetPurse(TableIdx);
@@ -2687,7 +2630,6 @@ BOOL CPlayer::SetQuestState(DWORD QuestIdx, QSTATETYPE value)
 void CPlayer::SetInitState(int initstate,DWORD protocol)
 {
 	m_initState |= initstate;
-
 
 	// 091106 LUJ, 복잡한 if문 처리를 간결화
 	if(FALSE == (m_initState & PLAYERINITSTATE_ONLY_ADDED))
@@ -2776,7 +2718,6 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 		msg.ItemTotalInfo,
 		GETITEM_FLAG_INVENTORY | GETITEM_FLAG_WEAR);
 	GetSendMoveInfo(&msg.SendMoveInfo,NULL);
-
 
 	msg.ChrTotalInfo.CurMapNum = GAMERESRCMNGR->GetLoadMapNum();
 	msg.UniqueIDinAgent = GetUniqueIDinAgent();
@@ -3225,12 +3166,10 @@ void CPlayer::QuestProcess()
 	m_QuestGroup.Process();
 }
 
-
 void CPlayer::SetPKModeEndtime()
 {
 	m_HeroInfo.LastPKModeEndTime = 0;
 }
-
 
 void CPlayer::AddBadFameReduceTime()
 {
@@ -3259,8 +3198,6 @@ void CPlayer::AddBadFameReduceTime()
 		BadFameCharacterUpdate( GetID(), GetBadFame() );
 	}
 }
-
-
 
 void CPlayer::SpeedHackCheck()
 {
@@ -3291,7 +3228,6 @@ void CPlayer::ClearMurderIdx()
 	m_MurdererIDX = 0;
 	m_bPenaltyByDie = FALSE;
 }
-
 
 DWORD CPlayer::Damage(CObject* pAttacker,RESULTINFO* pDamageInfo)
 {
@@ -3505,7 +3441,6 @@ void CPlayer::SetJob( BYTE jobGrade, BYTE jobIdx )
 						m_HeroCharacterInfo.Job[4],
 						m_HeroCharacterInfo.Job[5] );
 
-
 	// 071112 웅주, 클래스 로그를 남긴다
 	InsertLogJob( this, m_HeroCharacterInfo.Job[0], jobGrade, jobIdx );
 
@@ -3513,7 +3448,6 @@ void CPlayer::SetJob( BYTE jobGrade, BYTE jobIdx )
 	CHARCALCMGR->AddPlayerJobSkill(this);
 
 	WebEvent( GetUserID(), 2 );
-
 
 	// 100113 ONS 주민등록정보중 클래스정보가 변경되었을 경우 에이전트로 전달한다.
 	CHARACTER_TOTALINFO TotalInfo;
@@ -3948,7 +3882,6 @@ BOOL CPlayer::IsInventoryPosition( POSTYPE position )
 	return begin <= position && end >= position;
 }
 
-
 void CPlayer::ResetSetItemStatus()
 {
 	mSetItemLevel.clear();
@@ -3957,12 +3890,10 @@ void CPlayer::ResetSetItemStatus()
 		sizeof(m_SetItemStats));
 }
 
-
 const CPlayer::SetItemLevel& CPlayer::GetSetItemLevel() const
 {
 	return mSetItemLevel;
 }
-
 
 CPlayer::SetItemLevel& CPlayer::GetSetItemLevel()
 {
@@ -4017,7 +3948,6 @@ void CPlayer::AddSetSkill(DWORD skillIndex, LEVELTYPE level)
 	m_SkillTree->Update(
 		skill);
 }
-
 
 void CPlayer::RemoveSetSkill(DWORD skillIndex, LEVELTYPE level)
 {
@@ -4154,7 +4084,6 @@ void CPlayer::RemoveCoolTime( DWORD coolTimeGroupIndex)
 	mCoolTimeMap.erase(
 		coolTimeGroupIndex);
 }
-
 
 void CPlayer::ProcCoolTime()
 {
@@ -4519,7 +4448,6 @@ BOOL CPlayer::RemoveItem(DWORD nItemID, DWORD nItemNum, eLogitemmoney eLogKind)
 	return TRUE;
 }
 // E 결혼 추가 added by hseos 2008.01.29
-
 
 BOOL CPlayer::IncreaseInventoryExpansion()
 {
@@ -5570,6 +5498,10 @@ BOOL CPlayer::IsForbidChat() const
 
 	return TRUE;
 }
+
+#ifdef _MAP00_
+void	CPlayer::SetGuildName( char* GuildName ) { SafeStrCpy(m_HeroCharacterInfo.GuildName, GuildName, _countof(m_HeroCharacterInfo.GuildName)); }
+#endif
 
 // --- skr 12/01/2020
 void CPlayer::UpdateRelife()
