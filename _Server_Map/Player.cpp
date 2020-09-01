@@ -54,6 +54,7 @@
 #include "./SiegeWarfareMgr.h"
 #include "../[CC]SiegeDungeon/SiegeDungeonMgr.h"
 #include "Vehicle.h"
+#include "VehicleManager.h"
 #include "HousingMgr.h"
 #include "Trigger\Manager.h"
 #include "Trigger\Message.h"
@@ -61,9 +62,8 @@
 #include "..\[CC]Header\GameResourceManager.h"
 #include "Dungeon\DungeonMgr.h"
 #include "..\hseos\ResidentRegist\SHResidentRegistManager.h"
-
-// --- skr 12/01/2020
-#include "Relife.h"
+#include "StreetTournamentMgr.h"
+#include "ObjectStateManager.h"
 
 #define INSERTLOG_TIME			600000 // 10 min
 #define INSERTLOG_TIME_CHINA	1800000 // 30 min
@@ -87,22 +87,34 @@ m_SkillTree(new cSkillTree)
 	mTargetPosX = 0;
 	mTargetPosZ = 0;
 
-	// 071128 LYW --- Player : HPMP ì ìš©.
+	// 071128 LYW --- Player : HPMP Àû¿ë.
 	m_byHP_Point = 0;
 	m_byMP_Point = 0;
 
 	m_bResetSkill	=	false;
 	m_bResetStat	=	false;
+	//aziz Reborn in Game 29 Sep
+	m_bResetLevel	=	false;
 	m_ItemArrayList.Initialize(10);
 	m_FollowMonsterList.Initialize(5);
 	m_QuestList.Initialize(30);
 	m_dweFamilyRewardExp = 0;
 	m_byCurFamilyMemCnt	 = 0;
 	m_dwCurrentResurrectIndex = 0;
+	m_registeredstreettournament = FALSE;
+	m_STrank = 0;
+	m_MovedOnSt = FALSE;
+	m_AliasType = 0;
+	m_MaxCountSpin = 0;
+	m_VerifyCaptcha = 0;
+	m_VerifyCount = 0;
+	m_VerifyKillCount = 0;
+	m_index = 0;
 // --- skr : relife
  	RelifeON = FALSE;
 	RelifeTimer = 0;
   RelifeStartTime = 0;
+  currentwarehouseset = 0;
 }
 
 CPlayer::~CPlayer()
@@ -119,13 +131,13 @@ void CPlayer::InitClearData()
 
 	m_ItemContainer.SetInit(eItemTable_Weared,		TP_WEAR_START,			SLOT_WEAR_NUM,			&m_WearSlot);
 	m_ItemContainer.SetInit(eItemTable_Storage,		TP_STORAGE_START,		SLOT_STORAGE_NUM,		&m_StorageSlot);
-	m_ItemContainer.SetInit(eItemTable_Shop,		TP_SHOPITEM_START,		SLOT_SHOPITEM_NUM,		&m_ShopItemSlot);
+	m_ItemContainer.SetInit(eItemTable_Shop,		TP_SHOPITEM_START,		SLOT_SHOPITEM_NUM,		&m_ShopItemSlot);	
 	memset(&m_HeroCharacterInfo,0,sizeof(CHARACTER_TOTALINFO));
 	memset(&m_HeroInfo,0,sizeof(HERO_TOTALINFO));
-	// 090701 LUJ, ë©”ëª¨ë¦¬í’€ì´ ìƒì„±ì/ì†Œë©¸ìë¥¼ í˜¸ì¶œí•˜ì§€ ì•Šê¸° ë•Œë¬¸ì— Init()ì—ì„œ ì´ˆê¸°í™”í•˜ì§€ ì•Šì„ ê²½ìš°, ì´ˆê¸°í™”ê°€
-	//		ì´ë¤„ì§€ì§€ ì•ŠëŠ”ë‹¤. purseëŠ” ê·¸ ë™ì•ˆ ì´ˆê¸°í™”ë¥¼ í•˜ì§€ ì•Šì•˜ìœ¼ë¯€ë¡œ í”Œë ˆì´ì–´ê°€ ì ‘ì†ì„ í•´ì œí•´ë„ ì •ë³´(ì“°ë ˆê¸°ê°’)ë¥¼
-	//		ê°–ê³  ìˆë‹¤. ì´ë¥¼ ì´ìš©í•´ì„œ DBì—ì„œ ê°’ì„ ê°€ì ¸ì˜¤ê¸° ì „ì— ë¹ ë¥´ê²Œ ë§µ ì´ë™ì„ ë°˜ë³µí•  ê²½ìš°, ì“°ë ˆê¸°ê°’ì„ DBì— ì €ì¥í•˜ê²Œëœë‹¤.
-	//		ì´ë¥¼ ë§‰ê¸° ìœ„í•´ ê°ì²´ ì´ˆê¸°í™” ìˆœê°„ì— ê°’ë„ ì´ˆê¸°í™”ì‹œí‚¤ë„ë¡ í•œë‹¤
+	// 090701 LUJ, ¸Ş¸ğ¸®Ç®ÀÌ »ı¼ºÀÚ/¼Ò¸êÀÚ¸¦ È£ÃâÇÏÁö ¾Ê±â ¶§¹®¿¡ Init()¿¡¼­ ÃÊ±âÈ­ÇÏÁö ¾ÊÀ» °æ¿ì, ÃÊ±âÈ­°¡
+	//		ÀÌ·ïÁöÁö ¾Ê´Â´Ù. purse´Â ±× µ¿¾È ÃÊ±âÈ­¸¦ ÇÏÁö ¾Ê¾ÒÀ¸¹Ç·Î ÇÃ·¹ÀÌ¾î°¡ Á¢¼ÓÀ» ÇØÁ¦ÇØµµ Á¤º¸(¾²·¹±â°ª)¸¦
+	//		°®°í ÀÖ´Ù. ÀÌ¸¦ ÀÌ¿ëÇØ¼­ DB¿¡¼­ °ªÀ» °¡Á®¿À±â Àü¿¡ ºü¸£°Ô ¸Ê ÀÌµ¿À» ¹İº¹ÇÒ °æ¿ì, ¾²·¹±â°ªÀ» DB¿¡ ÀúÀåÇÏ°ÔµÈ´Ù.
+	//		ÀÌ¸¦ ¸·±â À§ÇØ °´Ã¼ ÃÊ±âÈ­ ¼ø°£¿¡ °ªµµ ÃÊ±âÈ­½ÃÅ°µµ·Ï ÇÑ´Ù
 	m_InventoryPurse.SetZeroMoney();
 	m_StoragePurse.SetZeroMoney();
 
@@ -135,20 +147,20 @@ void CPlayer::InitClearData()
 	m_SkillFailCount = 0;
 	mGravity = 0;
 
-	memset( &m_DateMatching, 0, sizeof(DATE_MATCHING_INFO));			// ë°ì´íŠ¸ ë§¤ì¹­ ì£¼ë¯¼ì¦.
-	// desc_hseos_ì£¼ë¯¼ë“±ë¡01
-	// S ì£¼ë¯¼ë“±ë¡ ì¶”ê°€ added by hseos 2007.06.09
+	memset( &m_DateMatching, 0, sizeof(DATE_MATCHING_INFO));			// µ¥ÀÌÆ® ¸ÅÄª ÁÖ¹ÎÁõ.
+	// desc_hseos_ÁÖ¹Îµî·Ï01
+	// S ÁÖ¹Îµî·Ï Ãß°¡ added by hseos 2007.06.09
 	m_DateMatching.nSerchTimeTick = gCurTime;
 	m_DateMatching.nRequestChatTimeTick = gCurTime;
-	// E ì£¼ë¯¼ë“±ë¡ ì¶”ê°€ added by hseos 2007.06.09
+	// E ÁÖ¹Îµî·Ï Ãß°¡ added by hseos 2007.06.09
 	memset( &mPassiveStatus, 0, sizeof( Status ) );
 	memset( &mBuffStatus, 0, sizeof( Status ) );
 	memset( &mRatePassiveStatus, 0, sizeof( Status ) );
 	memset( &mRateBuffStatus, 0, sizeof( Status ) );
 	memset( &mAbnormalStatus, 0, sizeof( AbnormalStatus ) );
 
-	// desc_hseos_ëª¬ìŠ¤í„°ë¯¸í„°01
-	// S ëª¬ìŠ¤í„°ë¯¸í„° ì¶”ê°€ added by hseos 2007.05.23
+	// desc_hseos_¸ó½ºÅÍ¹ÌÅÍ01
+	// S ¸ó½ºÅÍ¹ÌÅÍ Ãß°¡ added by hseos 2007.05.23
 	ZeroMemory(&m_stMonstermeterInfo, sizeof(m_stMonstermeterInfo));
 	m_stMonstermeterInfo.nPlayTimeTick = gCurTime;
 	m_pcFamilyEmblem = NULL;
@@ -181,7 +193,8 @@ void CPlayer::InitClearData()
 
 	m_bResetSkill	=	false;
 	m_bResetStat	=	false;
-
+	//aziz Reborn in Game 29 Sep
+	m_bResetLevel	=	false;
 	m_dwReturnSkillMoney = 0;
 
 //---KES AUTONOTE
@@ -198,6 +211,7 @@ void CPlayer::InitClearData()
 		m_fFishItemRate[i] = 0.0f;
 	}
 	m_lstGetFishList.clear();
+	
 
 	m_wFishingLevel = 1;
 	m_dwFishingExp = 0;
@@ -213,7 +227,7 @@ void CPlayer::InitClearData()
 	m_wFireCount = 0;
 	m_dwLastCookTime = 0;
 	memset(m_MasterRecipe, 0, sizeof(m_MasterRecipe));
-	// 090316 LUJ, íƒˆ ê²ƒ ì´ˆê¸°í™”
+	// 090316 LUJ, Å» °Í ÃÊ±âÈ­
 	SetSummonedVehicle( 0 );
 	SetMountedVehicle( 0 );
 	m_initState = 0;
@@ -230,10 +244,26 @@ void CPlayer::InitClearData()
 
 	m_dwConsignmentTick = 0;
 	ForbidChatTime = 0;
-
+	m_registeredstreettournament = FALSE;
+	m_STrank = 0;
+	m_MovedOnSt = FALSE;
+	m_lastspinslot = 0;
+	m_pSpinslothasil1 = 0;
+	m_pSpinslothasil2 = 0;
+	m_pSpinslothasil3 = 0;
+	m_pSpinslothasil4 = 0;
+	m_wincodehasil = 0;
+	SlotGetmoneyhasil = 0;
+	m_additemachievment = 0;
+	m_MaxCountSpin = 0;
+	m_VerifyCaptcha = 0;
+	m_VerifyCount = 0;
+	m_VerifyKillCount = 0;
+	m_index = 0;
 // --- skr 22012020
 	RelifeON = FALSE;
 	RelifeStartTime = 0;
+	currentwarehouseset = 0;
 }
 
 BOOL CPlayer::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseObjectInfo)
@@ -248,7 +278,7 @@ BOOL CPlayer::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseObject
 	m_bExit = FALSE;
 	m_bNormalExit = FALSE;
 //
-	CObject::Init(kind, AgentNum, pBaseObjectInfo); //Â¿â“’Â±aÂ¼Â­Â´A eObjectState_NoneAÂ¸Â·I Â¸Â¸Î¼cÂ´U.
+	CObject::Init(kind, AgentNum, pBaseObjectInfo); //¢¯¨Ï¡¾a¨ù¡©¢¥A eObjectState_NoneA¢¬¡¤I ¢¬¢¬¥ìc¢¥U.
 
 //KES 040827
 	OBJECTSTATEMGR_OBJ->StartObjectState( this, eObjectState_Immortal, 0 );
@@ -293,14 +323,16 @@ BOOL CPlayer::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseObject
 
 	m_bNoExpPenaltyByPK = FALSE;
 
-	// 080515 LUJ, ì¿¨íƒ€ì„ ì²´í¬ìš© êµ¬ì¡°ì²´ ì´ˆê¸°í™”
+	m_pvpscore = 0;
+
+	// 080515 LUJ, ÄğÅ¸ÀÓ Ã¼Å©¿ë ±¸Á¶Ã¼ ÃÊ±âÈ­
 	ZeroMemory( &mCheckCoolTime, sizeof( mCheckCoolTime ) );
 
 	m_dwSkillCancelCount = 0;
 	m_dwSkillCancelLastTime = 0;
 
 	m_dwAutoNoteLastExecuteTime = 0;
-
+	
 	mWeaponEnchantLevel = 0;
 	mPhysicDefenseEnchantLevel = 0;
 	mMagicDefenseEnchantLevel = 0;
@@ -313,6 +345,7 @@ BOOL CPlayer::Init(EObjectKind kind,DWORD AgentNum, BASEOBJECT_INFO* pBaseObject
 // --- skr 22012020
 	RelifeON = FALSE;
 	RelifeStartTime = 0;
+	currentwarehouseset = 0;
 
 	return TRUE;
 }
@@ -322,11 +355,20 @@ void CPlayer::Release()
 //-------------------
 
 	FishingData_Update(GetID(), GetFishingLevel(), GetFishingExp(), GetFishPoint());
+	//aziz MallShop in Game Method 1
+	VipData_Update(GetID(), GetVipPoint());
+	//aziz Reborn 24 Sep
+	RebornData_Update(GetID(), GetRebornData());
+	//aziz Kill Shop 30 Sep
+	KillData_Update(GetID(), GetKillPoint(), 3);
+	//aziz Reborn Point 13 Oct
+	RebornPoint_Update(GetID(), GetRebornPoint());
+
 	Cooking_Update(this);
 
-	if(FISHINGMGR->GetActive())		// ë‚šì‹œìŠ¤í¬ë¦½íŠ¸ê°€ í™œì„±ë˜ì–´ ìˆì„ë•Œ(==2ë²ˆ ë†ì¥ë§µ)ë§Œ ê¸°ë¡.
+	if(FISHINGMGR->GetActive())		// ³¬½Ã½ºÅ©¸³Æ®°¡ È°¼ºµÇ¾î ÀÖÀ»¶§(==2¹ø ³óÀå¸Ê)¸¸ ±â·Ï.
 	{
-		// 080808 LUJ, ë‚šì‹œ ì •ë³´ë¥¼ ë¡œê·¸ë¡œ ì €ì¥
+		// 080808 LUJ, ³¬½Ã Á¤º¸¸¦ ·Î±×·Î ÀúÀå
 		Log_Fishing(
 			GetID(),
 			eFishingLog_Regular,
@@ -373,8 +415,8 @@ void CPlayer::Release()
 	}
 
 	m_FollowMonsterList.RemoveAll();
-
-	{
+	
+	{		
 		m_QuestList.SetPositionHead();
 
 		for(
@@ -386,6 +428,7 @@ void CPlayer::Release()
 
 		m_QuestList.RemoveAll();
 	}
+	
 
 	m_InventoryPurse.Release();
 	m_StoragePurse.Release();
@@ -396,7 +439,7 @@ void CPlayer::Release()
 	m_SkillFailCount = 0;
 	m_SkillTree->Release();
 
-	SAFE_DELETE_ARRAY(m_pcFamilyEmblem);
+	SAFE_DELETE_ARRAY(m_pcFamilyEmblem);	
 
 	{
 		CPet* const petObject = PETMGR->GetPet(
@@ -407,7 +450,7 @@ void CPlayer::Release()
 			FALSE);
 	}
 
-	// 090316 LUJ, í•˜ì°¨ ì²˜ë¦¬í•œë‹¤
+	// 090316 LUJ, ÇÏÂ÷ Ã³¸®ÇÑ´Ù
 	{
 		CVehicle* const vehicleObject = ( CVehicle* )g_pUserTable->FindUser( GetMountedVehicle() );
 
@@ -436,7 +479,7 @@ void CPlayer::UpdateGravity()
 
 BOOL CPlayer::AddFollowList(CMonster * pMob)
 {
-	if( m_FollowMonsterList.GetDataNum() < 50 )		//max 50ë§ˆë¦¬
+	if( m_FollowMonsterList.GetDataNum() < 50 )		//max 50¸¶¸®
 	{
 		m_FollowMonsterList.Add(pMob, pMob->GetID());
 		UpdateGravity();
@@ -446,12 +489,12 @@ BOOL CPlayer::AddFollowList(CMonster * pMob)
 	return FALSE;
 }
 BOOL CPlayer::RemoveFollowAsFarAs(DWORD GAmount, CObject* pMe )
-{
+{	
 	VECTOR3 * ObjectPos	= CCharMove::GetPosition(this);
 	BOOL bMe = FALSE;
 
 	while(GAmount > 100)
-	{
+	{	
 		CMonster * MaxObject = NULL;
 		float	MaxDistance	= -1;
 		float	Distance	= 0;
@@ -488,7 +531,7 @@ BOOL CPlayer::RemoveFollowAsFarAs(DWORD GAmount, CObject* pMe )
 		}
 	}
 
-	return bMe;
+	return bMe;	
 }
 
 void CPlayer::RemoveFollowList(DWORD ID)
@@ -518,7 +561,7 @@ void CPlayer::InitCharacterTotalInfo(CHARACTER_TOTALINFO* pTotalInfo)
 	else
 		m_HeroCharacterInfo.bVisible = TRUE;
 
-	// 071226 KTH -- ì¸ë²¤í† ë¦¬ì˜ í¬ê¸°ë¥¼ ì„¤ì •í•˜ì—¬ ì¤€ë‹¤.
+	// 071226 KTH -- ÀÎº¥Åä¸®ÀÇ Å©±â¸¦ ¼³Á¤ÇÏ¿© ÁØ´Ù.
 	m_InventorySlot.SetSlotNum( POSTYPE( SLOT_INVENTORY_NUM + GetInventoryExpansionSize() ) );
 
 }
@@ -531,7 +574,7 @@ void CPlayer::InitHeroTotalInfo(HERO_TOTALINFO* pHeroInfo)
 
 void CPlayer::InitItemTotalInfo(ITEM_TOTALINFO* pItemInfo)
 {
-	m_ItemContainer.GetSlot(eItemTable_Inventory)->SetItemInfoAll(pItemInfo->Inventory);
+	m_ItemContainer.GetSlot(eItemTable_Inventory)->SetItemInfoAll(pItemInfo->Inventory);	
 	m_ItemContainer.GetSlot(eItemTable_Weared)->SetItemInfoAll(pItemInfo->WearedItem);
 }
 
@@ -548,7 +591,7 @@ void CPlayer::InitStorageInfo(BYTE Storagenum,MONEYTYPE money)
 
 	MONEYTYPE maxmoney = 0;
 	if(Storagenum)
-	{
+	{		
 		STORAGELISTINFO* pInfo = STORAGEMGR->GetStorageInfo(Storagenum);
 		ASSERT(pInfo);
 		maxmoney = pInfo ? pInfo->MaxMoney : 10;
@@ -558,7 +601,7 @@ void CPlayer::InitStorageInfo(BYTE Storagenum,MONEYTYPE money)
 		ASSERT(money == 0);
 		maxmoney = 0;
 	}
-	pSlot->CreatePurse(&m_StoragePurse, this, money, maxmoney);
+	pSlot->CreatePurse(&m_StoragePurse, this, money, maxmoney);	
 }
 
 void CPlayer::InitShopItemInfo(SEND_SHOPITEM_INFO& message)
@@ -621,7 +664,7 @@ void CPlayer::GetItemtotalInfo(ITEM_TOTALINFO& pRtInfo,DWORD dwFlag)
 	}
 }
 
-// 091026 LUJ, ë²„í¼ í¬ê¸°ì— ë¬´ê´€í•˜ê²Œ ì „ì†¡í•  ìˆ˜ ìˆë„ë¡ ìˆ˜ì •
+// 091026 LUJ, ¹öÆÛ Å©±â¿¡ ¹«°üÇÏ°Ô Àü¼ÛÇÒ ¼ö ÀÖµµ·Ï ¼öÁ¤
 DWORD CPlayer::SetAddMsg(DWORD dwReceiverID, BOOL isLogin, MSGBASE*& sendMessage)
 {
 	if(eUSERLEVEL_GM >= GetUserLevel() &&
@@ -639,10 +682,11 @@ DWORD CPlayer::SetAddMsg(DWORD dwReceiverID, BOOL isLogin, MSGBASE*& sendMessage
 	GetBaseObjectInfo( &message.BaseObjectInfo);
 	GetCharacterTotalInfo( &message.TotalInfo );
 	message.TotalInfo.DateMatching = m_DateMatching;
+	message.TotalInfo.AliasType = m_AliasType;
 	message.bLogin = BYTE(isLogin);
 	message.mMountedVehicle.mVehicleIndex = GetSummonedVehicle();
 
-	// 090316 LUJ, íƒ‘ìŠ¹ ì •ë³´ ë³µì‚¬
+	// 090316 LUJ, Å¾½Â Á¤º¸ º¹»ç
 	{
 		CVehicle* const vehicle = ( CVehicle* )g_pUserTable->FindUser( GetMountedVehicle() );
 
@@ -653,7 +697,7 @@ DWORD CPlayer::SetAddMsg(DWORD dwReceiverID, BOOL isLogin, MSGBASE*& sendMessage
 		}
 	}
 
-	// í•˜ìš°ì§• íƒ‘ìŠ¹ ì •ë³´ ë³µì‚¬
+	// ÇÏ¿ìÂ¡ Å¾½Â Á¤º¸ º¹»ç
 	{
 		const stHouseRiderInfo* const houseRiderInfo = HOUSINGMGR->GetRiderInfo(GetID());
 
@@ -686,7 +730,7 @@ DWORD CPlayer::SetAddMsg(DWORD dwReceiverID, BOOL isLogin, MSGBASE*& sendMessage
 				break;
 			}
 		}
-
+		
 		message.AddableInfo.AddInfo(
 			BYTE(kind),
 			WORD(strlen(StallTitle)+1),
@@ -713,6 +757,18 @@ DWORD CPlayer::SetAddMsg(DWORD dwReceiverID, BOOL isLogin, MSGBASE*& sendMessage
 			break;
 		}
 	}
+	//for street tournament //johan cek
+	/*if(STREETTOURNAMENTMGR->GetState() != 0)
+	{
+		MSG_WORD3 msg2 ;
+		ZeroMemory(&msg2, sizeof(msg2));
+		msg2.Category	= MP_USERCONN ;
+		msg2.Protocol	= MP_USERCONN_STREETTOURNAMENT_STATE;
+		msg2.wData1		= 0 ;
+		msg2.wData2		= STREETTOURNAMENTMGR->GetState();
+		msg2.wData3		= STREETTOURNAMENTMGR->GetStage();
+		SendMsg( &msg2, sizeof(msg2) );
+	} */
 
 	sendMessage = &message;
 	return message.GetMsgLength();
@@ -738,7 +794,7 @@ void CPlayer::CalcState()
 }
 
 void CPlayer::MoneyUpdate( MONEYTYPE money )
-{
+{	
 	m_HeroInfo.Money = money;
 }
 
@@ -748,7 +804,7 @@ void CPlayer::SetStrength(DWORD val)
 
 	CHARCALCMGR->CalcCharStats(this);
 
-	// DBï¿ ?ï¿ Â® Â¨uÂ¡Aï¿¥iÂ¡IAIÂ¨Â¡ï¿ c
+	// DB¡Ë?¡Ë¢ç ¡§u¢®A¡Íi¢®IAI¡§¢®¡Ëc
 	CharacterHeroInfoUpdate(this);
 
 	MSG_DWORD msg;
@@ -765,7 +821,7 @@ void CPlayer::SetDexterity(DWORD val)
 
 	CHARCALCMGR->CalcCharStats(this);
 
-	// DBï¿ ?ï¿ Â® Â¨uÂ¡Aï¿¥iÂ¡IAIÂ¨Â¡ï¿ c
+	// DB¡Ë?¡Ë¢ç ¡§u¢®A¡Íi¢®IAI¡§¢®¡Ëc
 	CharacterHeroInfoUpdate(this);
 
 	MSG_DWORD msg;
@@ -779,10 +835,10 @@ void CPlayer::SetVitality(DWORD val)
 {
 	m_HeroInfo.Vit = val;
 
-	// Â¡iyï¿ ï¿¢iÂ¡Â¤A, â“’oâ“’Â¡Â¨uiÂ¡Â¤A; ï¿ ï¿¥UÂ¨oA Â¡Ã†eÂ¡ie
+	// ¢®iy¡Ë¡şi¢®¢´A, ¨Ïo¨Ï¢®¡§ui¢®¢´A; ¡Ë¡ÍU¡§oA ¢®¨¡e¢®ie
 	CHARCALCMGR->CalcCharStats(this);
 
-	// DBï¿ ?ï¿ Â® Â¨uÂ¡Aï¿¥iÂ¡IAIÂ¨Â¡ï¿ c
+	// DB¡Ë?¡Ë¢ç ¡§u¢®A¡Íi¢®IAI¡§¢®¡Ëc
 	CharacterHeroInfoUpdate(this);
 
 	MSG_DWORD msg;
@@ -796,10 +852,10 @@ void CPlayer::SetWisdom(DWORD val)
 {
 	m_HeroInfo.Wis = val;
 
-	// â“’Ã¸Â¡iÂ¡Â¤A; ï¿ ï¿¥UÂ¨oA Â¡Ã†eÂ¡ie
+	// ¨Ï©ª¢®i¢®¢´A; ¡Ë¡ÍU¡§oA ¢®¨¡e¢®ie
 	CHARCALCMGR->CalcCharStats(this);
 
-	// DBï¿ ?ï¿ Â® Â¨uÂ¡Aï¿¥iÂ¡IAIÂ¨Â¡ï¿ c
+	// DB¡Ë?¡Ë¢ç ¡§u¢®A¡Íi¢®IAI¡§¢®¡Ëc
 	CharacterHeroInfoUpdate(this);
 
 	MSG_DWORD msg;
@@ -858,41 +914,45 @@ CItemSlot * CPlayer::GetSlot(eITEMTABLE tableIdx)
 
 //-------------------------------------------------------------------------------------------------
 //	NAME : SetLifeForce
-//	DESC : 080625 LYW
-//		   ìºë¦­í„°ê°€ ì£½ì€ ìƒíƒœì—ì„œ ê°•ì¢…ì´ë‚˜ íŠ•ê¹€ í˜„ìƒì´ ë°œìƒ í•  ë•Œ,
-//		   ìºë¦­í„°ì˜ ìƒëª…ë ¥ 50%ë¥¼ ë³µêµ¬í•´ ì£¼ì–´ì•¼ í•œë‹¤. ê·¸ëŸ°ë° ìƒíƒœê°€ ì£½ì€ ìƒíƒœë©´,
-//		   ê¸°ì¡´ í•¨ìˆ˜ëŠ” return ì²˜ë¦¬ë¥¼ í•˜ë¯€ë¡œ, ê°•ì œë¡œ ë³µêµ¬ ì—¬ë¶€ë¥¼ ì„¸íŒ…í•  ìˆ˜ ìˆëŠ” í•¨ìˆ˜ë¥¼ ì¶”ê°€í•œë‹¤.
+//	DESC : 080625 LYW 
+//		   Ä³¸¯ÅÍ°¡ Á×Àº »óÅÂ¿¡¼­ °­Á¾ÀÌ³ª Æ¨±è Çö»óÀÌ ¹ß»ı ÇÒ ¶§, 
+//		   Ä³¸¯ÅÍÀÇ »ı¸í·Â 50%¸¦ º¹±¸ÇØ ÁÖ¾î¾ß ÇÑ´Ù. ±×·±µ¥ »óÅÂ°¡ Á×Àº »óÅÂ¸é, 
+//		   ±âÁ¸ ÇÔ¼ö´Â return Ã³¸®¸¦ ÇÏ¹Ç·Î, °­Á¦·Î º¹±¸ ¿©ºÎ¸¦ ¼¼ÆÃÇÒ ¼ö ÀÖ´Â ÇÔ¼ö¸¦ Ãß°¡ÇÑ´Ù.
 //-------------------------------------------------------------------------------------------------
-void CPlayer::SetLifeForce(DWORD Life, BYTE byForce, BOOL bSendMsg)
+void CPlayer::SetLifeForce(DWORD Life, BYTE byForce, BOOL bSendMsg) 
 {
-	// ê°•ì œ ì„¸íŒ… ì—¬ë¶€ë¥¼ í™•ì¸í•œë‹¤.
+	// °­Á¦ ¼¼ÆÃ ¿©ºÎ¸¦ È®ÀÎÇÑ´Ù.
 	if(byForce == FALSE)
 	{
-		// ìºë¦­í„°ê°€ ì£½ì€ ìƒíƒœë¼ë©´, return ì²˜ë¦¬ë¥¼ í•œë‹¤.
+		// Ä³¸¯ÅÍ°¡ Á×Àº »óÅÂ¶ó¸é, return Ã³¸®¸¦ ÇÑ´Ù.
 		if(GetState() == eObjectState_Die) return ;
 	}
 
-	// í˜„ì¬ ìºë¦­í„° ë ˆë²¨ì— ë§ëŠ” ìµœëŒ€ ìƒëª…ë ¥ì„ ë°›ëŠ”ë‹¤.
+
+	// ÇöÀç Ä³¸¯ÅÍ ·¹º§¿¡ ¸Â´Â ÃÖ´ë »ı¸í·ÂÀ» ¹Ş´Â´Ù.
 	DWORD maxlife = 0 ;
 	maxlife = GetMaxLife() ;
 
-	// ìƒëª…ë ¥ ìˆ˜ì¹˜ ìœ íš¨ ì²´í¬.
+
+	// »ı¸í·Â ¼öÄ¡ À¯È¿ Ã¼Å©.
 	if(Life > maxlife) Life = maxlife ;
 
-	// ì¸ìë¡œ ë„˜ì–´ì˜¨ ìƒëª…ë ¥ì´ ê¸°ì¡´ ìƒëª…ë ¥ ë³´ë‹¤ ì‘ìœ¼ë©´, return ì²˜ë¦¬ë¥¼ í•œë‹¤.
+
+	// ÀÎÀÚ·Î ³Ñ¾î¿Â »ı¸í·ÂÀÌ ±âÁ¸ »ı¸í·Â º¸´Ù ÀÛÀ¸¸é, return Ã³¸®¸¦ ÇÑ´Ù.
 	if( m_HeroCharacterInfo.Life >= Life ) return ;
 
-	// ê¸°ì¡´ ìƒëª…ë ¥ / ì¸ìë¡œ ë„˜ì–´ì˜¨ ìƒëª…ë ¥ì´ ê°™ì§€ ì•Šìœ¼ë©´,
+	
+	// ±âÁ¸ »ı¸í·Â / ÀÎÀÚ·Î ³Ñ¾î¿Â »ı¸í·ÂÀÌ °°Áö ¾ÊÀ¸¸é,
 	if(m_HeroCharacterInfo.Life != Life)
 	{
-		// ë©”ì‹œì§€ ì „ì†¡ í•˜ëŠ” ìƒí™©ì´ë¼ë©´,
+		// ¸Ş½ÃÁö Àü¼Û ÇÏ´Â »óÈ²ÀÌ¶ó¸é,
 		if(bSendMsg == TRUE)
 		{
-			//// ìƒˆë¡œìš´ ìƒëª…ë ¥ì„ ê³„ì‚°í•œë‹¤.
+			//// »õ·Î¿î »ı¸í·ÂÀ» °è»êÇÑ´Ù.
 			//DWORD dwNewLife = 0 ;
 			//dwNewLife = Life - GetLife() ;
 
-			// ë©”ì‹œì§€ë¥¼ ì „ì†¡í•œë‹¤.
+			// ¸Ş½ÃÁö¸¦ Àü¼ÛÇÑ´Ù.
 			MSG_INT msg ;
 			msg.Category = MP_CHAR ;
 			msg.Protocol = MP_CHAR_LIFE_ACK ;
@@ -902,16 +962,21 @@ void CPlayer::SetLifeForce(DWORD Life, BYTE byForce, BOOL bSendMsg)
 
 			SendMsg(&msg,sizeof(msg)) ;
 		}
-
+		
 		SendLifeToParty(
 			Life);
 	}
+		
 
-	// ìºë¦­í„°ì˜ ìƒëª…ë ¥ì„ ì„¸íŒ…í•œë‹¤.
+	// Ä³¸¯ÅÍÀÇ »ı¸í·ÂÀ» ¼¼ÆÃÇÑ´Ù.
 	m_HeroCharacterInfo.Life = Life ;
 }
 
-void CPlayer::SetLife(DWORD val,BOOL bSendMsg)
+
+
+
+
+void CPlayer::SetLife(DWORD val,BOOL bSendMsg) 
 {
 	if(GetState() == eObjectState_Die)
 		return;
@@ -919,12 +984,12 @@ void CPlayer::SetLife(DWORD val,BOOL bSendMsg)
 	DWORD maxlife = GetMaxLife();
 	if(val > maxlife)
 		val = maxlife;
-
-	if(m_HeroCharacterInfo.Life != val)	// ï¿¥iÂ¡Iâ“’oIAo AIÂ¡Ã†â“’Â¡ï¿ ?iï¿ ?ï¿ Â®ï¿ ï¿¥A ï¿ ?Â¡Ã¾Aaï¿ ?ï¿ Â®Â¨uÂ¡â“’ Â¡iÂ¨IAÂ¨Âªï¿ ï¿¥U.
+	
+	if(m_HeroCharacterInfo.Life != val)	// ¡Íi¢®I¨ÏoIAo AI¢®¨¡¨Ï¢®¡Ë?i¡Ë?¡Ë¢ç¡Ë¡ÍA ¡Ë?¢®©­Aa¡Ë?¡Ë¢ç¡§u¢®¨Ï ¢®i¡§IA¡§¨£¡Ë¡ÍU.
 	{
 		if(bSendMsg == TRUE)
 		{
-			// To AÂ¡Ã¾ï¿ OoAIÂ¨uâ“’ï¿¡Â¨Â¡ï¿ c -------------------------------
+			// To A¢®©­¡ËOoAI¡§u¨Ï¡Ì¡§¢®¡Ëc -------------------------------
 			MSG_INT msg;
 			msg.Category = MP_CHAR;
 			msg.Protocol = MP_CHAR_LIFE_BROADCAST;
@@ -933,16 +998,16 @@ void CPlayer::SetLife(DWORD val,BOOL bSendMsg)
 			msg.nData = val - GetLife();
 			PACKEDDATA_OBJ->QuickSend( this, &msg, sizeof( msg ) );
 		}
-
+		
 		SendLifeToParty(
 			val);
 	}
-
 	m_HeroCharacterInfo.Life = val;
+	
 }
 
 void CPlayer::SendLifeToParty(DWORD val)
-{
+{	
 	if(CParty* pParty = PARTYMGR->GetParty(GetPartyIdx()))
 	{
 		MSG_DWORD2 message;
@@ -962,39 +1027,47 @@ void CPlayer::SendLifeToParty(DWORD val)
 	}
 }
 
+
+
+
+
 //-------------------------------------------------------------------------------------------------
 //	NAME : SetLifeForce
-//	DESC : 080625 LYW
-//		   ìºë¦­í„°ê°€ ì£½ì€ ìƒíƒœì—ì„œ ê°•ì¢…ì´ë‚˜ íŠ•ê¹€ í˜„ìƒì´ ë°œìƒ í•  ë•Œ,
-//		   ìºë¦­í„°ì˜ ë§ˆë‚˜ 30%ë¥¼ ë³µêµ¬í•´ ì£¼ì–´ì•¼ í•œë‹¤. ê·¸ëŸ°ë° ìƒíƒœê°€ ì£½ì€ ìƒíƒœë©´,
-//		   ê¸°ì¡´ í•¨ìˆ˜ëŠ” return ì²˜ë¦¬ë¥¼ í•˜ë¯€ë¡œ, ê°•ì œë¡œ ë³µêµ¬ ì—¬ë¶€ë¥¼ ì„¸íŒ…í•  ìˆ˜ ìˆëŠ” í•¨ìˆ˜ë¥¼ ì¶”ê°€í•œë‹¤.
+//	DESC : 080625 LYW 
+//		   Ä³¸¯ÅÍ°¡ Á×Àº »óÅÂ¿¡¼­ °­Á¾ÀÌ³ª Æ¨±è Çö»óÀÌ ¹ß»ı ÇÒ ¶§, 
+//		   Ä³¸¯ÅÍÀÇ ¸¶³ª 30%¸¦ º¹±¸ÇØ ÁÖ¾î¾ß ÇÑ´Ù. ±×·±µ¥ »óÅÂ°¡ Á×Àº »óÅÂ¸é, 
+//		   ±âÁ¸ ÇÔ¼ö´Â return Ã³¸®¸¦ ÇÏ¹Ç·Î, °­Á¦·Î º¹±¸ ¿©ºÎ¸¦ ¼¼ÆÃÇÒ ¼ö ÀÖ´Â ÇÔ¼ö¸¦ Ãß°¡ÇÑ´Ù.
 //-------------------------------------------------------------------------------------------------
-void CPlayer::SetManaForce(DWORD Mana, BYTE byForce, BOOL bSendMsg)
+void CPlayer::SetManaForce(DWORD Mana, BYTE byForce, BOOL bSendMsg) 
 {
-	// ê°•ì œ ì„¸íŒ… ì—¬ë¶€ë¥¼ í™•ì¸í•œë‹¤.
+	// °­Á¦ ¼¼ÆÃ ¿©ºÎ¸¦ È®ÀÎÇÑ´Ù.
 	if(byForce == FALSE)
 	{
-		// ìºë¦­í„°ê°€ ì£½ì€ ìƒíƒœë¼ë©´, return ì²˜ë¦¬ë¥¼ í•œë‹¤.
+		// Ä³¸¯ÅÍ°¡ Á×Àº »óÅÂ¶ó¸é, return Ã³¸®¸¦ ÇÑ´Ù.
 		if(GetState() == eObjectState_Die) return ;
 	}
 
-	// ìºë¦­í„°ì˜ í˜„ì¬ ë ˆë²¨ìƒ ìµœëŒ€ ë§ˆë‚˜ ìˆ˜ì¹˜ë¥¼ ë°›ëŠ”ë‹¤.
+
+	// Ä³¸¯ÅÍÀÇ ÇöÀç ·¹º§»ó ÃÖ´ë ¸¶³ª ¼öÄ¡¸¦ ¹Ş´Â´Ù.
 	DWORD MaxMana = 0 ;
 	MaxMana = GetMaxMana() ;
 
-	// ì¸ìë¡œ ë„˜ì–´ì˜¨ ë§ˆë‚˜ì˜ ìœ íš¨ ë²”ìœ„ë¥¼ ì²´í¬.
+
+	// ÀÎÀÚ·Î ³Ñ¾î¿Â ¸¶³ªÀÇ À¯È¿ ¹üÀ§¸¦ Ã¼Å©.
 	if(Mana > MaxMana) Mana = MaxMana ;
 
-	// ì¸ìë¡œ ë„˜ì–´ì˜¨ ë§ˆë‚˜ëŸ‰ì´ ê¸°ì¡´ ë§ˆë‚˜ëŸ‰ ë³´ë‹¤ ì‘ìœ¼ë©´, return ì²˜ë¦¬ë¥¼ í•œë‹¤.
+
+	// ÀÎÀÚ·Î ³Ñ¾î¿Â ¸¶³ª·®ÀÌ ±âÁ¸ ¸¶³ª·® º¸´Ù ÀÛÀ¸¸é, return Ã³¸®¸¦ ÇÑ´Ù.
 	if( m_HeroInfo.Mana >= Mana ) return ;
 
-	// ê¸°ì¡´ë§ˆë‚˜ / ì¸ìë¡œ ë„˜ì–´ì˜¨ ë§ˆë‚˜ê°€ ê°™ì§€ ì•Šìœ¼ë©´,
+
+	// ±âÁ¸¸¶³ª / ÀÎÀÚ·Î ³Ñ¾î¿Â ¸¶³ª°¡ °°Áö ¾ÊÀ¸¸é,
 	if( m_HeroInfo.Mana != Mana)
 	{
-		// ë©”ì‹œì§€ ì „ì†¡ ì—¬ë¶€ê°€ TRUE ì´ë©´,
+		// ¸Ş½ÃÁö Àü¼Û ¿©ºÎ°¡ TRUE ÀÌ¸é,
 		if(bSendMsg)
 		{
-			// ë§ˆë‚˜ë¥¼ ì „ì†¡í•œë‹¤.
+			// ¸¶³ª¸¦ Àü¼ÛÇÑ´Ù.
 			MSG_DWORD msg ;
 			msg.Category = MP_CHAR ;
 			msg.Protocol = MP_CHAR_MANA_GET_ACK;
@@ -1002,17 +1075,22 @@ void CPlayer::SetManaForce(DWORD Mana, BYTE byForce, BOOL bSendMsg)
 			msg.dwData = Mana ;
 			SendMsg(&msg,sizeof(msg)) ;
 		}
-
+		
 		SendManaToParty(
 			Mana);
 	}
+	
 
-	// ìºë¦­í„°ì˜ ë§ˆë‚˜ë¥¼ ì„¸íŒ…í•œë‹¤.
-	m_HeroInfo.Mana = Mana ;
+	// Ä³¸¯ÅÍÀÇ ¸¶³ª¸¦ ¼¼ÆÃÇÑ´Ù.
+	m_HeroInfo.Mana = Mana ; 
 }
 
+
+
+
+
 void CPlayer::SetMana(DWORD val,BOOL bSendMsg)
-{
+{ 
 	if(GetState() == eObjectState_Die)
 		return;
 
@@ -1022,7 +1100,7 @@ void CPlayer::SetMana(DWORD val,BOOL bSendMsg)
 
 	if( m_HeroInfo.Mana != val)
 	{
-		// 100223 ShinJS --- ë§ˆë‚˜ ë°ë¯¸ì§€ ì¶”ê°€ë¡œ ì¸í•œ ë§ˆë‚˜ ì •ë³´ë¥¼ ë³€í™”ëŸ‰ìœ¼ë¡œ ìˆ˜ì •.
+		// 100223 ShinJS --- ¸¶³ª µ¥¹ÌÁö Ãß°¡·Î ÀÎÇÑ ¸¶³ª Á¤º¸¸¦ º¯È­·®À¸·Î ¼öÁ¤.
 		if(bSendMsg)
 		{
 			MSG_INT msg;
@@ -1032,12 +1110,12 @@ void CPlayer::SetMana(DWORD val,BOOL bSendMsg)
 			msg.nData = val - GetMana();
 			SendMsg(&msg,sizeof(msg));
 		}
-
+		
 		SendManaToParty(
 			val);
 	}
-
-	m_HeroInfo.Mana = val;
+	m_HeroInfo.Mana = val; 
+	
 }
 
 void CPlayer::SendManaToParty(DWORD mana)
@@ -1065,7 +1143,7 @@ void CPlayer::SetMaxLife(DWORD val)
 {
 	m_HeroCharacterInfo.MaxLife = val;
 
-	// To AÂ¡Ã¾ï¿ OoAIÂ¨uâ“’ï¿¡Â¨Â¡ï¿ c -------------------------------
+	// To A¢®©­¡ËOoAI¡§u¨Ï¡Ì¡§¢®¡Ëc -------------------------------
 	MSG_DWORD msg;
 	msg.Category = MP_CHAR;
 	msg.Protocol = MP_CHAR_MAXLIFE_NOTIFY;
@@ -1078,7 +1156,7 @@ void CPlayer::SetMaxMana(DWORD val)
 {
 	m_HeroInfo.MaxMana= val;
 
-	// To AÂ¡Ã¾ï¿ OoAIÂ¨uâ“’ï¿¡Â¨Â¡ï¿ c -------------------------------
+	// To A¢®©­¡ËOoAI¡§u¨Ï¡Ì¡§¢®¡Ëc -------------------------------
 	MSG_DWORD msg;
 	msg.Category = MP_CHAR;
 	msg.Protocol = MP_CHAR_MAXMANA_NOTIFY;
@@ -1107,10 +1185,10 @@ void CPlayer::AddIntelligence( int val )
 {
 	SetIntelligence( m_HeroInfo.Int+ val ) ;
 }
-void CPlayer::SetPlayerLevelUpPoint(LEVELTYPE val)
-{
+void CPlayer::SetPlayerLevelUpPoint(LEVELTYPE val) 
+{ 
 	m_HeroInfo.LevelUpPoint=val;
-
+	
 	MSG_DWORD msg;
 	msg.Category = MP_CHAR;
 	msg.Protocol = MP_CHAR_LEVELUPPOINT_NOTIFY;
@@ -1119,8 +1197,8 @@ void CPlayer::SetPlayerLevelUpPoint(LEVELTYPE val)
 	SendMsg(&msg,sizeof(msg));
 }
 /*****************************************************************/
-/* 1. AEÂ¡Â¾aï¿ ?ï¿ Â® Aâ“’Ã¸ï¿ ï¿¢?AIÂ¡Ã†ï¿ Â® Â¡iyÂ¨uÂ¨ï¿¢ï¿¥iCÂ¨uu;ï¿ OÂ¡Ã— from DBResultQuery
-/* 2. SetPlayerExpPoint()ï¿ ?ï¿ Â®Â¨uÂ¡â“’ AOï¿ ï¿¥e Â¡Ã†â“’Â¡CeAï¿ Â®ï¿ ï¿¢| â“’Ã¸NÂ¨ui Â¨uâ“’o; ï¿ OÂ¡Ã— callï¿¥iE
+/* 1. AE¢®¨úa¡Ë?¡Ë¢ç A¨Ï©ª¡Ë¡ş?AI¢®¨¡¡Ë¢ç ¢®iy¡§u¡§¡ş¡ÍiC¡§uu;¡ËO¢®¡¿ from DBResultQuery
+/* 2. SetPlayerExpPoint()¡Ë?¡Ë¢ç¡§u¢®¨Ï AO¡Ë¡Íe ¢®¨¡¨Ï¢®CeA¡Ë¢ç¡Ë¡ş| ¨Ï©ªN¡§ui ¡§u¨Ïo; ¡ËO¢®¡¿ call¡ÍiE
 /*
 /*
 /*****************************************************************/
@@ -1141,18 +1219,18 @@ void CPlayer::SetLevel(LEVELTYPE level)
 		if(m_HeroInfo.MaxLevel < level)
 		{
 			m_HeroInfo.MaxLevel = level;
-			AddPoint += 5;
+			AddPoint += 1; //johan menambahkan 1 stat point setiap naik level
 
-			DWORD skillpoint = (DWORD)( ceil( level / 10.f ) + 19 );
+			DWORD skillpoint = (DWORD)( ceil( level / 4 ) + 3 );
 
 			if(m_HeroCharacterInfo.Race == RaceType_Devil)
 			{
-				skillpoint = (DWORD)( ceil( level / 10.f ) + 21 );
+				skillpoint = (DWORD)( ceil( level / 4 ) + 1 );
 			}
 
 			SetSkillPoint( skillpoint, FALSE );
 
-			// ì›¹ì´ë²¤íŠ¸
+			// À¥ÀÌº¥Æ®
 			if( level == 10 )
 			{
 				WebEvent( GetUserID(), 1 );
@@ -1205,19 +1283,21 @@ void CPlayer::SetLevel(LEVELTYPE level)
 		this);
 }
 
-// 080611 LYW --- Player : ìŠ¤í‚¬í¬ì¸íŠ¸ ì—…ë°ì´íŠ¸ ì²˜ë¦¬ë¥¼ ìˆ˜ì •í•¨.
-// (ì•„ì´í…œìœ¼ë¡œ ìŠ¤í‚¬ í¬ì¸íŠ¸ë¥¼ ì¶”ê°€í•˜ëŠ” ê¸°ëŠ¥ì´ ìƒê²¼ê¸° ë•Œë¬¸.)
+// 080611 LYW --- Player : ½ºÅ³Æ÷ÀÎÆ® ¾÷µ¥ÀÌÆ® Ã³¸®¸¦ ¼öÁ¤ÇÔ.
+// (¾ÆÀÌÅÛÀ¸·Î ½ºÅ³ Æ÷ÀÎÆ®¸¦ Ãß°¡ÇÏ´Â ±â´ÉÀÌ »ı°å±â ¶§¹®.)
 //void CPlayer::SetSkillPoint( DWORD point )
 void CPlayer::SetSkillPoint( DWORD point, BYTE byForced )
 {
-	// ê°•ì œ ì—…ë°ì´íŠ¸ ì—¬ë¶€ ì²´í¬.
+	// °­Á¦ ¾÷µ¥ÀÌÆ® ¿©ºÎ Ã¼Å©.
 	ASSERT(byForced <= TRUE) ;
 	if(byForced > TRUE) return ;
 
-	// ìŠ¤í‚¬ í¬ì¸íŠ¸ ì—…ë°ì´íŠ¸.
+
+	// ½ºÅ³ Æ÷ÀÎÆ® ¾÷µ¥ÀÌÆ®.
 	GetHeroTotalInfo()->SkillPoint += point;
 
-	// í´ë¼ì´ì–¸íŠ¸ ì „ì†¡
+
+	// Å¬¶óÀÌ¾ğÆ® Àü¼Û
 	MSG_DWORD msg;
 
 	msg.Category = MP_SKILLTREE;
@@ -1227,14 +1307,17 @@ void CPlayer::SetSkillPoint( DWORD point, BYTE byForced )
 
 	SendMsg(&msg, sizeof(msg));
 
-	// DB ì—…ë°ì´íŠ¸
+
+	// DB ¾÷µ¥ÀÌÆ®
 	SkillPointUpdate( GetID(), GetSkillPoint() );
 
-	// 071129 LYW --- Player : ëˆ„ì  ìŠ¤í‚¬ í¬ì¸íŠ¸ ì—…ë°ì´íŠ¸.
+
+	// 071129 LYW --- Player : ´©Àû ½ºÅ³ Æ÷ÀÎÆ® ¾÷µ¥ÀÌÆ®.
 	//DB_UpdateAccumulateSkillPoint(GetID(), FALSE, point) ;
 	DB_UpdateAccumulateSkillPoint(GetID(), byForced, point) ;
 
-	// 071114 ì›…ì£¼. ë¡œê·¸
+
+	// 071114 ¿õÁÖ. ·Î±×
 	{
 		const SKILL_BASE emptyData = { 0 };
 
@@ -1249,25 +1332,25 @@ DWORD CPlayer::GetSkillPoint()
 
 void CPlayer::SetPlayerExpPoint(EXPTYPE point)
 {
-	// 071119 ì›…ì£¼, í•œë²ˆì— ì—¬ëŸ¬ ë‹¨ê³„ë¥¼ ë ˆë²¨ì—…í•  ìˆ˜ ìˆë„ë¡ ìˆ˜ì •í•˜ê³  ì½”ë“œë¥¼ ë‹¨ìˆœí™”í•¨
+	// 071119 ¿õÁÖ, ÇÑ¹ø¿¡ ¿©·¯ ´Ü°è¸¦ ·¹º§¾÷ÇÒ ¼ö ÀÖµµ·Ï ¼öÁ¤ÇÏ°í ÄÚµå¸¦ ´Ü¼øÈ­ÇÔ
 
 	const LEVELTYPE& level = m_HeroCharacterInfo.Level;
-
+	
 	ASSERT( level <= MAX_CHARACTER_LEVEL_NUM );
 
 	if( level == MAX_CHARACTER_LEVEL_NUM )
 	{
 		const EXPTYPE& BeforeExp = m_HeroInfo.ExpPoint;
-		// Maxë ˆë²¨ì¼ë•Œ ê²½í—˜ì¹˜ í•˜ë½ì´ ë˜ì§€ ì•Šë˜ ë²„ê·¸ ìˆ˜ì •
-		// ê²½í—˜ì¹˜ ìƒìŠ¹ì¼ë•Œë§Œ ë¦¬í„´ì‹œí‚¨ë‹¤.
+		// Max·¹º§ÀÏ¶§ °æÇèÄ¡ ÇÏ¶ôÀÌ µÇÁö ¾Ê´ø ¹ö±× ¼öÁ¤
+		// °æÇèÄ¡ »ó½ÂÀÏ¶§¸¸ ¸®ÅÏ½ÃÅ²´Ù.
 		if( point > BeforeExp )
 		{
 			return;
 		}
-	}
-
-	// ê²½í—˜ì¹˜ê°€ ë‹¤ìŒ ë‹¨ê³„ì—ì„œ ìš”êµ¬í•˜ëŠ” ê²ƒë³´ë‹¤ í›¨ì”¬ ë§ì„ ìˆ˜ ìˆìœ¼ë¯€ë¡œ,
-	// ê³„ì† ì²´í¬í•´ì„œ ë ˆë²¨ì—…í•˜ì
+	}	
+	
+	// °æÇèÄ¡°¡ ´ÙÀ½ ´Ü°è¿¡¼­ ¿ä±¸ÇÏ´Â °Íº¸´Ù ÈÎ¾À ¸¹À» ¼ö ÀÖÀ¸¹Ç·Î,
+	// °è¼Ó Ã¼Å©ÇØ¼­ ·¹º§¾÷ÇÏÀÚ
 	{
 		EXPTYPE nextPoint = GAMERESRCMNGR->GetMaxExpPoint( level );
 
@@ -1303,7 +1386,7 @@ void CPlayer::AddPlayerExpPoint(EXPTYPE Exp)
 
 	EXPTYPE NewExp = 0 ;
 
-	// 090213 LYW --- Player : íŒ¨ë°€ë¦¬ ë©¤ë²„ ì ‘ì†ì— ë”°ë¥¸ ì¶”ê°€ ê²½í—˜ì¹˜ë¥¼ ì ìš©í•œë‹¤. ( ì„œë²„ ì ìš© ê²½í—˜ì¹˜ ì„¤ì • )
+	// 090213 LYW --- Player : ÆĞ¹Ğ¸® ¸â¹ö Á¢¼Ó¿¡ µû¸¥ Ãß°¡ °æÇèÄ¡¸¦ Àû¿ëÇÑ´Ù. ( ¼­¹ö Àû¿ë °æÇèÄ¡ ¼³Á¤ )
 	if( GetFamilyIdx() )
 	{
 		NewExp = GetPlayerExpPoint() + Exp + m_dweFamilyRewardExp ;
@@ -1322,7 +1405,7 @@ void CPlayer::AddPlayerExpPoint(EXPTYPE Exp)
 	msg.dwObjectID	= GetID() ;
 	msg.dweData1	= GetPlayerExpPoint() ;
 
-	// 090213 LYW --- Player : íŒ¨ë°€ë¦¬ ë©¤ë²„ ì ‘ì†ì— ë”°ë¥¸ ì¶”ê°€ ê²½í—˜ì¹˜ë¥¼ ì ìš©í•œë‹¤. ( ì „ì†¡ìš© ê²½í—˜ì¹˜ ì„¤ì • )
+	// 090213 LYW --- Player : ÆĞ¹Ğ¸® ¸â¹ö Á¢¼Ó¿¡ µû¸¥ Ãß°¡ °æÇèÄ¡¸¦ Àû¿ëÇÑ´Ù. ( Àü¼Û¿ë °æÇèÄ¡ ¼³Á¤ )
 	if( GetFamilyIdx() )
 	{
 		msg.dweData2	= Exp + m_dweFamilyRewardExp ;
@@ -1339,15 +1422,15 @@ void CPlayer::ReduceExpPoint(EXPTYPE minusExp, BYTE bLogType)
 {
 	LEVELTYPE minuslevel = 0;
 
-	// 080602 LYW --- Player : ê²½í—˜ì¹˜ ìˆ˜ì¹˜ (__int32) ì—ì„œ (__int64) ì‚¬ì´ì¦ˆë¡œ ë³€ê²½ ì²˜ë¦¬.
+	// 080602 LYW --- Player : °æÇèÄ¡ ¼öÄ¡ (__int32) ¿¡¼­ (__int64) »çÀÌÁî·Î º¯°æ Ã³¸®.
 	//DWORD CurExp = GetPlayerExpPoint();
 	EXPTYPE CurExp = GetPlayerExpPoint();
 
-	if(GetLevel() <= 1 && CurExp < minusExp)	//Â·Â¹ÂºÂ§1AÂº 0Â±iAoÂ¸Â¸ Â±iAIÂ´U.
+	if(GetLevel() <= 1 && CurExp < minusExp)	//¡¤©ö¨¬¡×1A¨¬ 0¡¾iAo¢¬¢¬ ¡¾iAI¢¥U.
 		minusExp = CurExp;
 
-	InsertLogExp( bLogType, GetID(), GetLevel(), minusExp, GetPlayerExpPoint(), m_MurdererKind, m_MurdererIDX, 0/*ì–´ë¹Œë¦¬í‹° ì‚­ì œ - GetPlayerAbilityExpPoint()*/);
-
+	InsertLogExp( bLogType, GetID(), GetLevel(), minusExp, GetPlayerExpPoint(), m_MurdererKind, m_MurdererIDX, 0/*¾îºô¸®Æ¼ »èÁ¦ - GetPlayerAbilityExpPoint()*/);
+	
 	while(1)
 	{
 		if(CurExp < minusExp)
@@ -1355,8 +1438,8 @@ void CPlayer::ReduceExpPoint(EXPTYPE minusExp, BYTE bLogType)
 			minusExp -= CurExp;
 			++minuslevel;
 			CurExp = GAMERESRCMNGR->GetMaxExpPoint(GetLevel()-minuslevel) - 1;
-			ASSERT(minuslevel<2);	//EÂ¤Â½AÂ³Âª CÃ˜Â¼Â­
-			if(minuslevel > 3)		//EÂ¤Â½AÂ³Âª CIÂ´A... Â¹â‰ªCNÂ·cCA Â¹Ã¦AoÂ¿e
+			ASSERT(minuslevel<2);	//E¢´¨öA©ø¨£ C¨ª¨ù¡©
+			if(minuslevel > 3)		//E¢´¨öA©ø¨£ CI¢¥A... ©ö¡ìCN¡¤cCA ©ö©¡Ao¢¯e
 				break;
 		}
 		else
@@ -1399,7 +1482,7 @@ void CPlayer::OnEndObjectState(EObjectState State)
 
 }
 
-// 090204 LUJ, íƒ€ì…ì„ ëª…í™•íˆ í•¨
+// 090204 LUJ, Å¸ÀÔÀ» ¸íÈ®È÷ ÇÔ
 eWeaponType CPlayer::GetWeaponEquipType()
 {
 	const ITEM_INFO* const pItemInfo = ITEMMGR->GetItemInfo( GetWearedWeapon() );
@@ -1407,7 +1490,7 @@ eWeaponType CPlayer::GetWeaponEquipType()
 	return pItemInfo ? eWeaponType( pItemInfo->WeaponType ) : eWeaponType_None;
 }
 
-// 080703 LUJ, ë°˜í™˜ íƒ€ì…ì„ enumìœ¼ë¡œ ë³€ê²½
+// 080703 LUJ, ¹İÈ¯ Å¸ÀÔÀ» enumÀ¸·Î º¯°æ
 eWeaponAnimationType CPlayer::GetWeaponAniType()
 {
 	const ITEM_INFO* leftInfo	= ITEMMGR->GetItemInfo( GetWearedItemIdx( eWearedItem_Weapon ) );
@@ -1416,7 +1499,7 @@ eWeaponAnimationType CPlayer::GetWeaponAniType()
 	const eWeaponAnimationType	leftType	= eWeaponAnimationType( leftInfo ? leftInfo->WeaponAnimation : eWeaponAnimationType_None );
 	const eWeaponAnimationType	rightType	= eWeaponAnimationType( rightInfo ? rightInfo->WeaponAnimation : eWeaponAnimationType_None );
 
-	// 080703 LUJ, ì–‘ì†ì˜ ë¬´ê¸°ê°€ ë‹¤ë¥´ë©´ ì´ë„ë¥˜ê°€ ì•„ë‹ˆë‹¤. ì™¼ì†ì— ë¬´ê¸°ë¥¼ ì•ˆ ë“¤ì—ˆì„ ê²½ìš°ë„ ë§ˆì°¬ê°€ì§€ì´ë‹¤.
+	// 080703 LUJ, ¾ç¼ÕÀÇ ¹«±â°¡ ´Ù¸£¸é ÀÌµµ·ù°¡ ¾Æ´Ï´Ù. ¿Ş¼Õ¿¡ ¹«±â¸¦ ¾È µé¾úÀ» °æ¿ìµµ ¸¶Âù°¡ÁöÀÌ´Ù.
 	if( leftType != rightType ||
 		leftType == eWeaponAnimationType_None )
 	{
@@ -1438,9 +1521,9 @@ void CPlayer::ReviveAfterShowdown( BOOL bSendMsg )
 		msg.Protocol = MP_USERCONN_CHARACTER_REVIVE;
 		msg.dwObjectID = GetID();
 		msg.dwMoverID = GetID();
-
+	
 		msg.cpos.Compress(CCharMove::GetPosition(this));
-
+		
 		PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
 	}
 
@@ -1448,29 +1531,61 @@ void CPlayer::ReviveAfterShowdown( BOOL bSendMsg )
 
 	m_YYLifeRecoverTime.bStart = FALSE;
 	m_YYManaRecoverTime.bStart = FALSE;
-	SetLife( GetMaxLife() * 30 / 100 );	//Â¨uoAï¿ Â® Â¨uiï¿ OÂ¡iÂ¡Ã†O COÂ¡Â¾i.
+	//aziz revive 100% HP after Battle Showdown
+	SetLife( GetMaxLife() * 100 / 100 );	//¡§uoA¡Ë¢ç ¡§ui¡ËO¢®i¢®¨¡O CO¢®¨úi.
 }
-
-// 080602 LYW --- Player : ê²½í—˜ì¹˜ ìˆ˜ì¹˜ (__int32) ì—ì„œ (__int64) ì‚¬ì´ì¦ˆë¡œ ë³€ê²½ ì²˜ë¦¬.
-//DWORD CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// ì œìë¦¬ ë¶€í™œì‹œ ì¶”ê°€ ê²½í—˜ì¹˜ í•˜ë½ì„ ì²˜ë¦¬í•˜ëŠ” í•¨ìˆ˜.
-EXPTYPE CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// ì œìë¦¬ ë¶€í™œì‹œ ì¶”ê°€ ê²½í—˜ì¹˜ í•˜ë½ì„ ì²˜ë¦¬í•˜ëŠ” í•¨ìˆ˜.
+void CPlayer::ReviveAfterShowdownHPFULL( BOOL bSendMsg )
 {
-	// desc_hseos_ë°ì´íŠ¸ ì¡´_01
-	// S ë°ì´íŠ¸ ì¡´ ì¶”ê°€ added by hseos 2007.11.30
-	// ..ì±Œë¦°ì§€ ì¡´ì—ì„œ ì£½ì–´ì„œ ë§µì•„ì›ƒì¼ ë•ŒëŠ” í˜ë„í‹° ì—†ìŒ
+	ClearMurderIdx();
+	m_bNeedRevive = TRUE;
+
+	if( bSendMsg )
+	{
+		MOVE_POS msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_USERCONN_CHARACTER_REVIVE;
+		msg.dwObjectID = GetID();
+		msg.dwMoverID = GetID();
+	
+		msg.cpos.Compress(CCharMove::GetPosition(this));
+		
+		PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
+	}
+
+	OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die);
+
+	m_YYLifeRecoverTime.bStart = FALSE;
+	m_YYManaRecoverTime.bStart = FALSE;
+	//ICE01 FULLHP BATTLE
+	SetLife(GetMaxLife());	//¡§uoA¡Ë¢ç ¡§ui¡ËO¢®i¢®¨¡O CO¢®¨úi.
+	SetMana(GetMaxMana());
+}
+	
+// 080602 LYW --- Player : °æÇèÄ¡ ¼öÄ¡ (__int32) ¿¡¼­ (__int64) »çÀÌÁî·Î º¯°æ Ã³¸®.
+//DWORD CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// Á¦ÀÚ¸® ºÎÈ°½Ã Ãß°¡ °æÇèÄ¡ ÇÏ¶ôÀ» Ã³¸®ÇÏ´Â ÇÔ¼ö.
+EXPTYPE CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// Á¦ÀÚ¸® ºÎÈ°½Ã Ãß°¡ °æÇèÄ¡ ÇÏ¶ôÀ» Ã³¸®ÇÏ´Â ÇÔ¼ö.
+{
+	// desc_hseos_µ¥ÀÌÆ® Á¸_01
+	// S µ¥ÀÌÆ® Á¸ Ãß°¡ added by hseos 2007.11.30
+	// ..Ã§¸°Áö Á¸¿¡¼­ Á×¾î¼­ ¸Ê¾Æ¿ôÀÏ ¶§´Â Æä³ÎÆ¼ ¾øÀ½
 	if (g_csDateManager.IsChallengeZoneHere())
 	{
 		return FALSE;
 	}
-	// E ë°ì´íŠ¸ ì¡´ ì¶”ê°€ added by hseos 2007.11.30
+	// E µ¥ÀÌÆ® Á¸ Ãß°¡ added by hseos 2007.11.30
 
-	// ê¸¸íŠ¸ í† ë„ˆë¨¼íŠ¸ì‹œ ì£½ì„ê²½ìš° íŒ¨ë„í‹° ì—†ìŒ.
+	// ±æÆ® Åä³Ê¸ÕÆ®½Ã Á×À»°æ¿ì ÆĞ³ÎÆ¼ ¾øÀ½.
+	//aziz remove pvp penalty
+	if(g_pServerSystem->GetMapNum()==PVP)
+	{
+		return FALSE;
+	}
 	if( g_pServerSystem->GetMapNum() == GTMAPNUM)
 	{
 		return FALSE;
 	}
 
-	DWORD PenaltyNum = 0 ;														// ì¶”ê°€ ê²½í—˜ì¹˜ í•˜ë½ì„ 2%ë¡œ ê³ ì •í•œë‹¤.
+	DWORD PenaltyNum = 0 ;														// Ãß°¡ °æÇèÄ¡ ÇÏ¶ôÀ» 2%·Î °íÁ¤ÇÑ´Ù.
 
 	if( bAdditionPenalty )
 	{
@@ -1480,8 +1595,8 @@ EXPTYPE CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// ì œìë¦¬ ë¶€í™œ
 	{
 		PenaltyNum = random(1, 3) ;
 	}
-
-	// 071217 KTH --- Statusì— ProtectExpì˜ íš¨ê³¼ê°€ ì¡´ì¬í•˜ë©´ ê²½í—˜ì¹˜ë¥¼ ê°ì†Œ ì‹œí‚¤ì§€ ì•ŠëŠ”ë‹¤.//
+	
+	// 071217 KTH --- Status¿¡ ProtectExpÀÇ È¿°ú°¡ Á¸ÀçÇÏ¸é °æÇèÄ¡¸¦ °¨¼Ò ½ÃÅ°Áö ¾Ê´Â´Ù.//
 	Status* pStatus;
 	pStatus = this->GetBuffStatus();
 
@@ -1491,86 +1606,87 @@ EXPTYPE CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// ì œìë¦¬ ë¶€í™œ
 	}
 	//////////////////////////////////////////////////////////////////////////////////////
 
-	LEVELTYPE CurLevel = GetLevel() ;											// í”Œë ˆì´ì–´ì˜ í˜„ì¬ ë ˆë²¨ì„ êµ¬í•œë‹¤.
+	LEVELTYPE CurLevel = GetLevel() ;											// ÇÃ·¹ÀÌ¾îÀÇ ÇöÀç ·¹º§À» ±¸ÇÑ´Ù.
 
-	EXPTYPE CurExp	= GetPlayerExpPoint() ;										// í”Œë ˆì´ì–´ì˜ í˜„ì¬ ê²½í—˜ì¹˜ë¥¼ êµ¬í•œë‹¤.
+	EXPTYPE CurExp	= GetPlayerExpPoint() ;										// ÇÃ·¹ÀÌ¾îÀÇ ÇöÀç °æÇèÄ¡¸¦ ±¸ÇÑ´Ù.
+	
+	EXPTYPE GoalExp	= GAMERESRCMNGR->GetMaxExpPoint(CurLevel) ;					// ÇÃ·¹ÀÌ¾îÀÇ ·¹º§¾÷ °æÇèÄ¡¸¦ ±¸ÇÑ´Ù. 
 
-	EXPTYPE GoalExp	= GAMERESRCMNGR->GetMaxExpPoint(CurLevel) ;					// í”Œë ˆì´ì–´ì˜ ë ˆë²¨ì—… ê²½í—˜ì¹˜ë¥¼ êµ¬í•œë‹¤.
+	//---KES CHECK : GoalExp´Â ¸Å¿ì Å« ¼öÀÌ´Ù. * PeanltyNumÀ» ÇßÀ» °æ¿ì DWORD¸¦ ³Ñ¾î°¥ ¼ö ÀÖ´Ù.
+	// 080602 LYW --- Player : °æÇèÄ¡ ¼öÄ¡ (__int32) ¿¡¼­ (__int64) »çÀÌÁî·Î º¯°æ Ã³¸®.
+	//DWORD dwExpA = GoalExp * PenaltyNum ;										// ÆĞ³ÎÆ¼ ¼öÄ¡¸¦ ±¸ÇÑ´Ù.
+	EXPTYPE dwExpA = GoalExp * PenaltyNum ;										// ÆĞ³ÎÆ¼ ¼öÄ¡¸¦ ±¸ÇÑ´Ù.
+	
+	EXPTYPE PenaltyExp = (EXPTYPE)(dwExpA / 100) ;								// ÆĞ³ÎÆ¼ °æÇèÄ¡¸¦ ±¸ÇÑ´Ù.
 
-	//---KES CHECK : GoalExpëŠ” ë§¤ìš° í° ìˆ˜ì´ë‹¤. * PeanltyNumì„ í–ˆì„ ê²½ìš° DWORDë¥¼ ë„˜ì–´ê°ˆ ìˆ˜ ìˆë‹¤.
-	// 080602 LYW --- Player : ê²½í—˜ì¹˜ ìˆ˜ì¹˜ (__int32) ì—ì„œ (__int64) ì‚¬ì´ì¦ˆë¡œ ë³€ê²½ ì²˜ë¦¬.
-	//DWORD dwExpA = GoalExp * PenaltyNum ;										// íŒ¨ë„í‹° ìˆ˜ì¹˜ë¥¼ êµ¬í•œë‹¤.
-	EXPTYPE dwExpA = GoalExp * PenaltyNum ;										// íŒ¨ë„í‹° ìˆ˜ì¹˜ë¥¼ êµ¬í•œë‹¤.
+	// 080602 LYW --- Player : °æÇèÄ¡ ¼öÄ¡ (__int32) ¿¡¼­ (__int64) »çÀÌÁî·Î º¯°æ Ã³¸®.
+	//DWORD dwExp = 0 ;															// Àü¼ÛÇÒ °æÇèÄ¡ º¯¼ö¸¦ ¼±¾ğÇÏ°í 0À¸·Î ¼¼ÆÃÇÑ´Ù.
+	EXPTYPE dwExp = 0 ;															// Àü¼ÛÇÒ °æÇèÄ¡ º¯¼ö¸¦ ¼±¾ğÇÏ°í 0À¸·Î ¼¼ÆÃÇÑ´Ù.
 
-	EXPTYPE PenaltyExp = (EXPTYPE)(dwExpA / 100) ;								// íŒ¨ë„í‹° ê²½í—˜ì¹˜ë¥¼ êµ¬í•œë‹¤.
+	BOOL bLevelDown = FALSE ;													// ·¹º§ ´Ù¿î¿©ºÎ º¯¼ö¸¦ ¼±¾ğÇÏ°í FALSE ¼¼ÆÃÀ» ÇÑ´Ù.
 
-	// 080602 LYW --- Player : ê²½í—˜ì¹˜ ìˆ˜ì¹˜ (__int32) ì—ì„œ (__int64) ì‚¬ì´ì¦ˆë¡œ ë³€ê²½ ì²˜ë¦¬.
-	//DWORD dwExp = 0 ;															// ì „ì†¡í•  ê²½í—˜ì¹˜ ë³€ìˆ˜ë¥¼ ì„ ì–¸í•˜ê³  0ìœ¼ë¡œ ì„¸íŒ…í•œë‹¤.
-	EXPTYPE dwExp = 0 ;															// ì „ì†¡í•  ê²½í—˜ì¹˜ ë³€ìˆ˜ë¥¼ ì„ ì–¸í•˜ê³  0ìœ¼ë¡œ ì„¸íŒ…í•œë‹¤.
-
-	BOOL bLevelDown = FALSE ;													// ë ˆë²¨ ë‹¤ìš´ì—¬ë¶€ ë³€ìˆ˜ë¥¼ ì„ ì–¸í•˜ê³  FALSE ì„¸íŒ…ì„ í•œë‹¤.
-
-	if( CurExp >= PenaltyExp )													// í˜„ì¬ ê²½í—˜ì¹˜ê°€ íŒ¨ë„í‹° ê²½í—˜ì¹˜ ì´ìƒì¼ ê²½ìš°.
+	if( CurExp >= PenaltyExp )													// ÇöÀç °æÇèÄ¡°¡ ÆĞ³ÎÆ¼ °æÇèÄ¡ ÀÌ»óÀÏ °æ¿ì.
 	{
-		dwExp = CurExp - PenaltyExp ;											// ì „ì†¡í•  ê²½í—˜ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
+		dwExp = CurExp - PenaltyExp ;											// Àü¼ÛÇÒ °æÇèÄ¡¸¦ ¼¼ÆÃÇÑ´Ù.
 
-		ASSERT( dwExp >= 0 ) ;													// ê²½í—˜ì¹˜ëŠ” 0ì´ìƒì´ì–´ì•¼ë§Œ í•œë‹¤.
+		ASSERT( dwExp >= 0 ) ;													// °æÇèÄ¡´Â 0ÀÌ»óÀÌ¾î¾ß¸¸ ÇÑ´Ù.
 
 		SetPlayerExpPoint( dwExp ) ;
 
 		MSG_DWORDEX3 msg ;
 
-		msg.Category	= MP_USERCONN ;											// ì¹´í…Œê³ ë¦¬ë¥¼ MP_USERCONNë¡œ ì„¸íŒ…í•œë‹¤.
-		msg.Protocol	= MP_USERCONN_CHARACTER_DOWNEXP_NOTICE ;				// í”„ë¡œí† ì½œì„ ê²½í—˜ì¹˜ í•˜ë½ìœ¼ë¡œ ì„¸íŒ…í•œë‹¤.
-		msg.dwObjectID	= GetID() ;												// í”Œë ˆì´ì–´ì˜ ì•„ì´ë””ë¥¼ ì„¸íŒ…í•œë‹¤.
-		msg.dweData1	= (DWORD)PenaltyNum ;									// íŒ¨ë„í‹° ìˆ˜ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
-		msg.dweData2	= dwExp ;												// ì „ì†¡í•  ê²½í—˜ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
+		msg.Category	= MP_USERCONN ;											// Ä«Å×°í¸®¸¦ MP_USERCONN·Î ¼¼ÆÃÇÑ´Ù.
+		msg.Protocol	= MP_USERCONN_CHARACTER_DOWNEXP_NOTICE ;				// ÇÁ·ÎÅäÄİÀ» °æÇèÄ¡ ÇÏ¶ôÀ¸·Î ¼¼ÆÃÇÑ´Ù.
+		msg.dwObjectID	= GetID() ;												// ÇÃ·¹ÀÌ¾îÀÇ ¾ÆÀÌµğ¸¦ ¼¼ÆÃÇÑ´Ù.
+		msg.dweData1	= (DWORD)PenaltyNum ;									// ÆĞ³ÎÆ¼ ¼öÄ¡¸¦ ¼¼ÆÃÇÑ´Ù.
+		msg.dweData2	= dwExp ;												// Àü¼ÛÇÒ °æÇèÄ¡¸¦ ¼¼ÆÃÇÑ´Ù.
 
 		if( bAdditionPenalty )
 		{
-			msg.dweData3		= TRUE ;												// ì¶”ê°€ ê²½í—˜ì¹˜ í•˜ë½ ì—¬ë¶€ë¥¼ TRUEë¡œ ì„¸íŒ…í•œë‹¤.
+			msg.dweData3		= TRUE ;												// Ãß°¡ °æÇèÄ¡ ÇÏ¶ô ¿©ºÎ¸¦ TRUE·Î ¼¼ÆÃÇÑ´Ù.
 		}
 		else
 		{
-			msg.dweData3		= FALSE ;												// ì¶”ê°€ ê²½í—˜ì¹˜ í•˜ë½ ì—¬ë¶€ë¥¼ FALSEë¡œ ì„¸íŒ…í•œë‹¤.
+			msg.dweData3		= FALSE ;												// Ãß°¡ °æÇèÄ¡ ÇÏ¶ô ¿©ºÎ¸¦ FALSE·Î ¼¼ÆÃÇÑ´Ù.
 		}
 
-		SendMsg(&msg, sizeof(msg)) ;											// í”Œë ˆì´ì–´ì—ê²Œ ë©”ì‹œì§€ë¥¼ ì „ì†¡í•œë‹¤.
+		SendMsg(&msg, sizeof(msg)) ;											// ÇÃ·¹ÀÌ¾î¿¡°Ô ¸Ş½ÃÁö¸¦ Àü¼ÛÇÑ´Ù.
 	}
-	else																		// í˜„ì¬ í”Œë ˆì´ì–´ì˜ ê²½í—˜ì¹˜ê°€ íŒ¨ë„í‹° ê²½í—˜ì¹˜ë³´ë‹¤ ì‘ì„ê²½ìš°.
+	else																		// ÇöÀç ÇÃ·¹ÀÌ¾îÀÇ °æÇèÄ¡°¡ ÆĞ³ÎÆ¼ °æÇèÄ¡º¸´Ù ÀÛÀ»°æ¿ì.
 	{
-		bLevelDown = TRUE ;														// ë ˆë²¨ ë‹¤ìš´ ì—¬ë¶€ë¥¼ TRUEë¡œ ì„¸íŒ…í•œë‹¤.
+		bLevelDown = TRUE ;														// ·¹º§ ´Ù¿î ¿©ºÎ¸¦ TRUE·Î ¼¼ÆÃÇÑ´Ù.
 
-		dwExp = PenaltyExp - CurExp ;											// ì „ì†¡í•  ê²½í—˜ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
+		dwExp = PenaltyExp - CurExp ;											// Àü¼ÛÇÒ °æÇèÄ¡¸¦ ¼¼ÆÃÇÑ´Ù.
 
-		ASSERT( dwExp >= 0 ) ;													// ê²½í—˜ì¹˜ëŠ” 0ì´ìƒì´ì–´ì•¼ë§Œ í•œë‹¤.
+		ASSERT( dwExp >= 0 ) ;													// °æÇèÄ¡´Â 0ÀÌ»óÀÌ¾î¾ß¸¸ ÇÑ´Ù.
 
-		GoalExp = GAMERESRCMNGR->GetMaxExpPoint(CurLevel-1) ;					// í•œë‹¨ê³„ ë‚®ì€ ë ˆë²¨ì˜ ë ˆë²¨ì—… ëª©í‘œ ê²½í—˜ì¹˜ë¥¼ êµ¬í•œë‹¤.
-		SetLevel( CurLevel -1 ) ;												// í”Œë ˆì´ì–´ì˜ ë ˆë²¨ì„ ë‹¤ìš´í•œ ë ˆë²¨ë¡œ ì„¸íŒ…í•œë‹¤.
-		SetPlayerExpPoint(GoalExp-dwExp) ;										// í”Œë ˆì´ì–´ì˜ ê²½í—˜ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
+		GoalExp = GAMERESRCMNGR->GetMaxExpPoint(CurLevel-1) ;					// ÇÑ´Ü°è ³·Àº ·¹º§ÀÇ ·¹º§¾÷ ¸ñÇ¥ °æÇèÄ¡¸¦ ±¸ÇÑ´Ù.
+		SetLevel( CurLevel -1 ) ;												// ÇÃ·¹ÀÌ¾îÀÇ ·¹º§À» ´Ù¿îÇÑ ·¹º§·Î ¼¼ÆÃÇÑ´Ù.
+		SetPlayerExpPoint(GoalExp-dwExp) ;										// ÇÃ·¹ÀÌ¾îÀÇ °æÇèÄ¡¸¦ ¼¼ÆÃÇÑ´Ù.
 
 		MSG_DWORDEX4 msg ;
 
-		msg.Category	= MP_USERCONN ;											// ì¹´í…Œê³ ë¦¬ë¥¼ MP_USERCONNë¡œ ì„¸íŒ…í•œë‹¤.
-		msg.Protocol	= MP_USERCONN_CHARACTER_DOWNLEVEL_NOTICE ;				// í”„ë¡œí† ì½œì„ ê²½í—˜ì¹˜ í•˜ë½ìœ¼ë¡œ ì„¸íŒ…í•œë‹¤.
-		msg.dwObjectID	= GetID() ;												// í”Œë ˆì´ì–´ì˜ ì•„ì´ë””ë¥¼ ì„¸íŒ…í•œë‹¤.
-		msg.dweData1	= (DWORDEX)GetLevel() ;									// í”Œë ˆì´ì–´ì˜ ë ˆë²¨ì„ ì„¸íŒ…í•œë‹¤.
-		msg.dweData2	= GoalExp-dwExp ;										// í”Œë ˆì´ì–´ì˜ ê²½í—˜ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
-		msg.dweData3	= (DWORDEX)PenaltyNum ;									// íŒ¨ë„í‹° ìˆ˜ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
+		msg.Category	= MP_USERCONN ;											// Ä«Å×°í¸®¸¦ MP_USERCONN·Î ¼¼ÆÃÇÑ´Ù.
+		msg.Protocol	= MP_USERCONN_CHARACTER_DOWNLEVEL_NOTICE ;				// ÇÁ·ÎÅäÄİÀ» °æÇèÄ¡ ÇÏ¶ôÀ¸·Î ¼¼ÆÃÇÑ´Ù.
+		msg.dwObjectID	= GetID() ;												// ÇÃ·¹ÀÌ¾îÀÇ ¾ÆÀÌµğ¸¦ ¼¼ÆÃÇÑ´Ù.
+		msg.dweData1	= (DWORDEX)GetLevel() ;									// ÇÃ·¹ÀÌ¾îÀÇ ·¹º§À» ¼¼ÆÃÇÑ´Ù.
+		msg.dweData2	= GoalExp-dwExp ;										// ÇÃ·¹ÀÌ¾îÀÇ °æÇèÄ¡¸¦ ¼¼ÆÃÇÑ´Ù.
+		msg.dweData3	= (DWORDEX)PenaltyNum ;									// ÆĞ³ÎÆ¼ ¼öÄ¡¸¦ ¼¼ÆÃÇÑ´Ù.
+
 
 		if( bAdditionPenalty )
 		{
-			msg.dweData4		= TRUE ;												// ì¶”ê°€ ê²½í—˜ì¹˜ í•˜ë½ ì—¬ë¶€ë¥¼ TRUEë¡œ ì„¸íŒ…í•œë‹¤.
+			msg.dweData4		= TRUE ;												// Ãß°¡ °æÇèÄ¡ ÇÏ¶ô ¿©ºÎ¸¦ TRUE·Î ¼¼ÆÃÇÑ´Ù.
 		}
 		else
 		{
-			msg.dweData4		= FALSE ;												// ì¶”ê°€ ê²½í—˜ì¹˜ í•˜ë½ ì—¬ë¶€ë¥¼ FALSEë¡œ ì„¸íŒ…í•œë‹¤.
+			msg.dweData4		= FALSE ;												// Ãß°¡ °æÇèÄ¡ ÇÏ¶ô ¿©ºÎ¸¦ FALSE·Î ¼¼ÆÃÇÑ´Ù.
 		}
 
-		SendMsg(&msg, sizeof(msg)) ;											// í”Œë ˆì´ì–´ì—ê²Œ ë©”ì‹œì§€ë¥¼ ì „ì†¡í•œë‹¤.
+		SendMsg(&msg, sizeof(msg)) ;											// ÇÃ·¹ÀÌ¾î¿¡°Ô ¸Ş½ÃÁö¸¦ Àü¼ÛÇÑ´Ù.
 	}
 
-	// 080414 LUJ, ê²½í—˜ì¹˜ ì†ì‹¤ ë•Œ ì†ì‹¤ëœ ê²½í—˜ì¹˜ ë§Œí¼ ë¡œê·¸ë¥¼ ë‚¨ê¸´ë‹¤
+	// 080414 LUJ, °æÇèÄ¡ ¼Õ½Ç ¶§ ¼Õ½ÇµÈ °æÇèÄ¡ ¸¸Å­ ·Î±×¸¦ ³²±ä´Ù
 	InsertLogExp(
 		eExpLog_LosebyRevivePresent,
 		GetID(),
@@ -1584,8 +1700,32 @@ EXPTYPE CPlayer::RevivePenalty(BOOL bAdditionPenalty)								// ì œìë¦¬ ë¶€í™œ
 	return PenaltyExp;
 }
 
+
 void CPlayer::RevivePresentSpot()
-{
+{	
+	//aziz revive Quick in PVP//Beyond SEA2
+	if(g_pServerSystem->GetMapNum()==PVP && GetState() == eObjectState_Die)
+	{
+		ClearMurderIdx();
+		m_bNeedRevive = TRUE;
+
+		MOVE_POS msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_USERCONN_CHARACTER_REVIVE;
+		msg.dwObjectID = GetID();
+		msg.dwMoverID = GetID();
+
+		msg.cpos.Compress(CCharMove::GetPosition(this));
+
+		PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
+
+		OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die);
+
+		m_YYLifeRecoverTime.bStart = FALSE;
+		m_YYManaRecoverTime.bStart = FALSE;
+		SetLife( GetMaxLife() * 100 / 100 );//test
+		SetMana( GetMaxMana() * 100 / 100 );
+	}
 	if(GetState() != eObjectState_Die)
 	{
 		ASSERT(0);
@@ -1598,7 +1738,7 @@ void CPlayer::RevivePresentSpot()
 		return;
 	}
 
-	if( LOOTINGMGR->IsLootedPlayer( GetID() ) )	//Â¡Â¤cÂ¨Â¡AAâ“’ï¿¢ï¿ ?Â¡I
+	if( LOOTINGMGR->IsLootedPlayer( GetID() ) )	//¢®¢´c¡§¢®AA¨Ï¡ş¡Ë?¢®I
 	{
 		MSG_BYTE msg;
 		msg.Category	= MP_USERCONN;
@@ -1619,7 +1759,7 @@ void CPlayer::RevivePresentSpot()
 
 		return;
 	}
-	// 100111 LUJ, ë¶€í™œ í”Œë˜ê·¸ì— ë”°ë¼ ë¶€í™œ ë¶ˆê°€ëŠ¥í•  ìˆ˜ë„ ìˆë‹¤
+	// 100111 LUJ, ºÎÈ° ÇÃ·¡±×¿¡ µû¶ó ºÎÈ° ºÒ°¡´ÉÇÒ ¼öµµ ÀÖ´Ù
 	else if(ReviveFlagTown == mReviveFlag)
 	{
 		MSG_BYTE message;
@@ -1641,9 +1781,9 @@ void CPlayer::RevivePresentSpot()
 	msg.Protocol = MP_USERCONN_CHARACTER_REVIVE;
 	msg.dwObjectID = GetID();
 	msg.dwMoverID = GetID();
-
+	
 	msg.cpos.Compress(CCharMove::GetPosition(this));
-
+		
 	PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
 
 	LEVELTYPE curLevel = GetLevel() ;
@@ -1651,18 +1791,17 @@ void CPlayer::RevivePresentSpot()
 	if( curLevel >= 10 && m_bNoExpPenaltyByPK == FALSE )
 	{
 		RevivePenalty(FALSE) ;
-// --- skr 20012020
-		//RevivePenalty(TRUE) ;
-
+		RevivePenalty(TRUE) ;
+	
 		if( !g_csDateManager.IsChallengeZoneHere() )
 		{
-			// 090204 LUJ, ê°ì†Œ íšŒìˆ˜ë¥¼ ì§€ì •í•¨
+			// 090204 LUJ, °¨¼Ò È¸¼ö¸¦ ÁöÁ¤ÇÔ
 			RemoveBuffCount( eBuffSkillCountType_Dead, 1 );
 		}
 	}
 
 	OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die);
-
+	
 	DWORD MaxLife = GetMaxLife();
 	DWORD MaxMana = GetMaxMana();
 
@@ -1673,11 +1812,11 @@ void CPlayer::RevivePresentSpot()
 	ReviveLife.Protocol = MP_CHAR_LIFE_ACK;
 	ReviveLife.dwObjectID = GetID();
 	ReviveLife.nData = max(1, nReviveVal);
-	SendMsg(&ReviveLife,sizeof(ReviveLife));
-
+	SendMsg(&ReviveLife,sizeof(ReviveLife));			
+		
 	SendLifeToParty(
 		nReviveVal);
-
+		
 	m_HeroCharacterInfo.Life = nReviveVal;
 
 	// 070417 LYW --- Player : Modified setting mana when the character revived.
@@ -1686,21 +1825,21 @@ void CPlayer::RevivePresentSpot()
 	{
 		SetMana(dwManaRate);
 	}
-
+	
 	m_YYLifeRecoverTime.bStart = FALSE;
 	m_YYManaRecoverTime.bStart = FALSE;
 	ClearMurderIdx();
 
 	m_bDieForGFW = FALSE;
 // --- skr  12/01/2020
-  SetRelifeStart();
-
+   SetRelifeStart();
+ 
 }
 
-// 080602 LYW --- Player : ê²½í—˜ì¹˜ ìˆ˜ì¹˜ (__int32) ì—ì„œ (__int64) ì‚¬ì´ì¦ˆë¡œ ë³€ê²½ ì²˜ë¦¬.
+// 080602 LYW --- Player : °æÇèÄ¡ ¼öÄ¡ (__int32) ¿¡¼­ (__int64) »çÀÌÁî·Î º¯°æ Ã³¸®.
 //DWORD CPlayer::ReviveBySkill()
 void CPlayer::ReviveBySkill( cSkillObject* pSkillObject )
-{
+{	
 	if( !pSkillObject )
 		return;
 
@@ -1716,7 +1855,7 @@ void CPlayer::ReviveBySkill( cSkillObject* pSkillObject )
 		return;
 	}
 
-	if( LOOTINGMGR->IsLootedPlayer( GetID() ) )	//Â¡Â¤cÂ¨Â¡AAâ“’ï¿¢ï¿ ?Â¡I
+	if( LOOTINGMGR->IsLootedPlayer( GetID() ) )	//¢®¢´c¡§¢®AA¨Ï¡ş¡Ë?¢®I
 	{
 		MSG_BYTE msg;
 		msg.Category	= MP_USERCONN;
@@ -1738,13 +1877,13 @@ void CPlayer::ReviveBySkill( cSkillObject* pSkillObject )
 		return;
 	}
 
-	// 100211 ONS ë¶€í™œëŒ€ìƒì—ê²Œ ë¶€í™œì—¬ë¶€ë¥¼ ë¬»ëŠ”ë‹¤.
-	// ë¶€í™œìŠ¤í‚¬ì„ ì„¤ì •í•œë‹¤.
+	// 100211 ONS ºÎÈ°´ë»ó¿¡°Ô ºÎÈ°¿©ºÎ¸¦ ¹¯´Â´Ù.
+	// ºÎÈ°½ºÅ³À» ¼³Á¤ÇÑ´Ù.
 	SetCurResurrectIndex( pSkillObject->GetSkillIdx() );
-
-	// ìŠ¤í‚¬Operatorì´ë¦„ì„ ì „ì†¡í•œë‹¤.
+	
+	// ½ºÅ³OperatorÀÌ¸§À» Àü¼ÛÇÑ´Ù.
 	CObject* pOperator = pSkillObject->GetOperator();
-	if( !pOperator ||
+	if( !pOperator || 
 		pOperator->GetObjectKind() != eObjectKind_Player )
 	{
 		return;
@@ -1759,7 +1898,7 @@ void CPlayer::ReviveBySkill( cSkillObject* pSkillObject )
 	SendMsg( &msg, sizeof(msg) );
 }
 
-// 100211 ONS ë¶€í™œëŒ€ìƒìê°€ ìˆ˜ë½í•œ ê²½ìš° ë¶€í™œì²˜ë¦¬ë¥¼ ì‹¤í–‰í•œë‹¤.
+// 100211 ONS ºÎÈ°´ë»óÀÚ°¡ ¼ö¶ôÇÑ °æ¿ì ºÎÈ°Ã³¸®¸¦ ½ÇÇàÇÑ´Ù.
 EXPTYPE CPlayer::OnResurrect()
 {
 	EXPTYPE exp = 0;
@@ -1770,9 +1909,9 @@ EXPTYPE CPlayer::OnResurrect()
 	msg.Protocol = MP_USERCONN_CHARACTER_REVIVE;
 	msg.dwObjectID = GetID();
 	msg.dwMoverID = GetID();
-
+	
 	msg.cpos.Compress(CCharMove::GetPosition(this));
-
+		
 	PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
 
 	LEVELTYPE curLevel = GetLevel() ;
@@ -1783,13 +1922,13 @@ EXPTYPE CPlayer::OnResurrect()
 
 		if( !g_csDateManager.IsChallengeZoneHere() && g_pServerSystem->GetMapNum()!=GTMAPNUM)
 		{
-			// 090204 LUJ, ê°ì†Œ íšŒìˆ˜ë¥¼ ì§€ì •í•¨
+			// 090204 LUJ, °¨¼Ò È¸¼ö¸¦ ÁöÁ¤ÇÔ
 			RemoveBuffCount( eBuffSkillCountType_Dead, 1 );
 		}
 	}
 
 	OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die);
-
+	
 	DWORD MaxLife = GetMaxLife();
 	DWORD MaxMana = GetMaxMana();
 
@@ -1800,11 +1939,11 @@ EXPTYPE CPlayer::OnResurrect()
 	ReviveLife.Protocol = MP_CHAR_LIFE_ACK;
 	ReviveLife.dwObjectID = GetID();
 	ReviveLife.nData = max(1, nReviveVal);
-	SendMsg(&ReviveLife,sizeof(ReviveLife));
-
+	SendMsg(&ReviveLife,sizeof(ReviveLife));			
+		
 	SendLifeToParty(
 		nReviveVal);
-
+		
 	m_HeroCharacterInfo.Life = nReviveVal;
 
 	// 070417 LYW --- Player : Modified setting mana when the character revived.
@@ -1813,7 +1952,7 @@ EXPTYPE CPlayer::OnResurrect()
 	{
 		SetMana(dwManaRate);
 	}
-
+	
 	m_YYLifeRecoverTime.bStart = FALSE;
 	m_YYManaRecoverTime.bStart = FALSE;
 	ClearMurderIdx();
@@ -1821,13 +1960,12 @@ EXPTYPE CPlayer::OnResurrect()
 	m_bDieForGFW = FALSE;
 // --- skr  12/01/2020
   SetRelifeStart();
-
 	return exp;
 }
 
 void CPlayer::ReviveLogIn()
-{
-	// ìºë¦­í„°ê°€ ì£½ì€ ìƒíƒœê°€ ì•„ë‹ˆë©´, ë¶€í™œ ì‹¤íŒ¨ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+{	
+	// Ä³¸¯ÅÍ°¡ Á×Àº »óÅÂ°¡ ¾Æ´Ï¸é, ºÎÈ° ½ÇÆĞ Ã³¸®¸¦ ÇÑ´Ù.
 	if(GetState() != eObjectState_Die)
 	{
 		ASSERT(0) ;
@@ -1839,8 +1977,9 @@ void CPlayer::ReviveLogIn()
 
 		return ;
 	}
+	
 
-	// ë£¨íŒ… ìƒíƒœë¼ë©´, ë¶€í™œ ì‹¤íŒ¨ì²˜ë¦¬ë¥¼ í•œë‹¤.
+	// ·çÆÃ »óÅÂ¶ó¸é, ºÎÈ° ½ÇÆĞÃ³¸®¸¦ ÇÑ´Ù.
 	if( LOOTINGMGR->IsLootedPlayer( GetID() ) )
 	{
 		MSG_BYTE msg ;
@@ -1852,7 +1991,8 @@ void CPlayer::ReviveLogIn()
 		return ;
 	}
 
-	// ì•„ì›ƒì²˜ë¦¬ê°€ ì‹œì‘ ë˜ì—ˆìœ¼ë©´, ì‹¤íŒ¨ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+
+	// ¾Æ¿ôÃ³¸®°¡ ½ÃÀÛ µÇ¾úÀ¸¸é, ½ÇÆĞ Ã³¸®¸¦ ÇÑ´Ù.
 	if( IsExitStart() )
 	{
 		MSG_BYTE msg ;
@@ -1863,7 +2003,7 @@ void CPlayer::ReviveLogIn()
 
 		return ;
 	}
-	// 100111 LUJ, ë¶€í™œ í”Œë˜ê·¸ì— ë”°ë¼ ë¶€í™œ ë¶ˆê°€ëŠ¥í•  ìˆ˜ë„ ìˆë‹¤
+	// 100111 LUJ, ºÎÈ° ÇÃ·¡±×¿¡ µû¶ó ºÎÈ° ºÒ°¡´ÉÇÒ ¼öµµ ÀÖ´Ù
 	else if(ReviveFlagHere == mReviveFlag)
 	{
 		MSG_BYTE message;
@@ -1879,7 +2019,7 @@ void CPlayer::ReviveLogIn()
 		return;
 	}
 
-	// ê³µì„± ê¸¸ë“œ ë˜ì „ì¸ì§€ í™•ì¸í•œë‹¤.
+	// °ø¼º ±æµå ´øÀüÀÎÁö È®ÀÎÇÑ´Ù.
 	if( SIEGEDUNGEONMGR->IsSiegeDungeon(g_pServerSystem->GetMapNum()) )
 	{
 		ReviveLogIn_GuildDungeon() ;
@@ -1890,28 +2030,57 @@ void CPlayer::ReviveLogIn()
 	}
 }
 
-// 081210 LYW --- Player : ê³µì„±ì „ ê¸¸ë“œ ë˜ì „ì—ì„œì˜ ë¶€í™œ ë¬¸ì œë¡œ ì¸í•´ ë‘ê°€ì§€ í•¨ìˆ˜ë¥¼ ì¶”ê°€í•œë‹¤.
+
+
+
+
+// 081210 LYW --- Player : °ø¼ºÀü ±æµå ´øÀü¿¡¼­ÀÇ ºÎÈ° ¹®Á¦·Î ÀÎÇØ µÎ°¡Áö ÇÔ¼ö¸¦ Ãß°¡ÇÑ´Ù.
 //-------------------------------------------------------------------------------------------------
 //	NAME		: ReviveLogIn_Normal
-//	DESC		: ì¼ë°˜ì ì¸ ì•ˆì „ì§€ëŒ€ ë¶€í™œ í•¨ìˆ˜.
+//	DESC		: ÀÏ¹İÀûÀÎ ¾ÈÀüÁö´ë ºÎÈ° ÇÔ¼ö.
 //	PROGRAMMER	: Yongs Lee
 //	DATE		: December 10, 2008
 //-------------------------------------------------------------------------------------------------
 void CPlayer::ReviveLogIn_Normal()
 {
-	// ë¶€í™œì°½ì´ í•„ìš”í•˜ë‹¤ê³  ì„¸íŒ…í•œë‹¤.
+	//aziz revive safe location pvp
+	if(g_pServerSystem->GetMapNum()==PVP)
+	{
+		ClearMurderIdx();
+		m_bNeedRevive = TRUE;
+
+		MOVE_POS msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_USERCONN_CHARACTER_REVIVE;
+		msg.dwObjectID = GetID();
+		msg.dwMoverID = GetID();
+
+		msg.cpos.Compress(CCharMove::GetPosition(this));
+
+		PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
+
+		OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die);
+
+		m_YYLifeRecoverTime.bStart = FALSE;
+		m_YYManaRecoverTime.bStart = FALSE;
+		SetLife( GetMaxLife() * 100 / 100 );//test
+		SetMana( GetMaxMana() * 100 / 100 );
+	}
+	// ºÎÈ°Ã¢ÀÌ ÇÊ¿äÇÏ´Ù°í ¼¼ÆÃÇÑ´Ù.
 	m_bNeedRevive = TRUE ;
 
-	// ë¶€í™œ ë©”ì‹œì§€ë¥¼ ì„¸íŒ…í•œë‹¤.
+
+	// ºÎÈ° ¸Ş½ÃÁö¸¦ ¼¼ÆÃÇÑ´Ù.
 	MOVE_POS msg ;
 
 	msg.Category	= MP_USERCONN ;
-	msg.Protocol	= MP_USERCONN_CHARACTER_REVIVE;
+	msg.Protocol	= MP_USERCONN_CHARACTER_REVIVE ;
 
 	msg.dwObjectID	= GetID() ;
 	msg.dwMoverID	= GetID() ;
 
-	// ë¶€í™œ ìœ„ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
+
+	// ºÎÈ° À§Ä¡¸¦ ¼¼ÆÃÇÑ´Ù.
 	VECTOR3* ppos ;
 	VECTOR3 pos ;
 
@@ -1933,34 +2102,38 @@ void CPlayer::ReviveLogIn_Normal()
 	pos.y	= 0 ;
 
 	msg.cpos.Compress(&pos) ;
-
+	
 	CCharMove::SetPosition(this,&pos) ;
 
 	PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg)) ;
+		
 
-	// Playerì˜ ì£½ìŒ ìƒíƒœë¥¼ í•´ì œí•œë‹¤.
+	// PlayerÀÇ Á×À½ »óÅÂ¸¦ ÇØÁ¦ÇÑ´Ù.
 	OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die) ;
 
-	// ë¶€í™œ íŒ¨ë„í‹°ë¥¼ ì ìš©í•œë‹¤.
-	const LEVELTYPE curLevel = GetLevel() ;
 
+	// ºÎÈ° ÆĞ³ÎÆ¼¸¦ Àû¿ëÇÑ´Ù.
+	const LEVELTYPE curLevel = GetLevel() ;
+	
 	if(	curLevel >= 10 && !m_bDieForGFW && m_bNoExpPenaltyByPK == FALSE )
 	{
 		RevivePenalty(FALSE) ;
-
+		
 		if( !g_csDateManager.IsChallengeZoneHere() && g_pServerSystem->GetMapNum()!=GTMAPNUM )
 		{
-			// 090204 LUJ, ê°ì†Œ íšŒìˆ˜ë¥¼ ì§€ì •í•¨
+			// 090204 LUJ, °¨¼Ò È¸¼ö¸¦ ÁöÁ¤ÇÔ
             RemoveBuffCount( eBuffSkillCountType_Dead, 1 );
 		}
 	}
 
-	// ê¸¸ë“œ í† ë„ˆë¨¼íŠ¸ ì˜ˆì™¸ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+
+	// ±æµå Åä³Ê¸ÕÆ® ¿¹¿Ü Ã³¸®¸¦ ÇÑ´Ù.
 	m_bDieForGFW = FALSE ;
 	m_dwRespawnTimeOnGTMAP = 0 ;
 	m_dwImmortalTimeOnGTMAP = 0 ;
+	
 
-	// ìƒí™©ì— ë”°ë¥¸ ìƒëª…ë ¥ì„ ì„¸íŒ…í•œë‹¤.
+	// »óÈ²¿¡ µû¸¥ »ı¸í·ÂÀ» ¼¼ÆÃÇÑ´Ù.
 	DWORD CurLife = GetMaxLife() ;
 
 	int nReviveVal = 0 ;
@@ -1978,7 +2151,8 @@ void CPlayer::ReviveLogIn_Normal()
 
 	m_HeroCharacterInfo.Life = nReviveVal ;
 
-	// ìƒí™©ì— ë”°ë¥¸ ë§ˆë‚˜ë ¥ì„ ì„¸íŒ…í•œë‹¤.
+
+	// »óÈ²¿¡ µû¸¥ ¸¶³ª·ÂÀ» ¼¼ÆÃÇÑ´Ù.
 	DWORD MaxMana = GetMaxMana() ;
 
 	DWORD dwManaRate = 0 ;
@@ -1993,18 +2167,20 @@ void CPlayer::ReviveLogIn_Normal()
 		}
 	}
 
-	// ê¸¸ë“œ í† ë„ˆë¨¼íŠ¸ ì˜ˆì™¸ë¥¼ ì²˜ë¦¬í•œë‹¤.
+
+	// ±æµå Åä³Ê¸ÕÆ® ¿¹¿Ü¸¦ Ã³¸®ÇÑ´Ù.
 	if(g_pServerSystem->GetMapNum() == GTMAPNUM)
 	{
 		WORD wCode = GetJobCodeForGT() ;
 		m_dwImmortalTimeOnGTMAP = GTMGR->GetImmortalTimeByClass(wCode) ;
 	}
 
-	// ë¬´ì ìƒíƒœ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+
+	// ¹«Àû»óÅÂ Ã³¸®¸¦ ÇÑ´Ù.
 	OBJECTSTATEMGR_OBJ->StartObjectState(this,eObjectState_Immortal,0) ;
 	// 06.08.29. RaMa.
 	OBJECTSTATEMGR_OBJ->EndObjectState( this, eObjectState_Immortal, 30000 ) ;
-
+	
 	m_YYLifeRecoverTime.bStart = FALSE ;
 	m_YYManaRecoverTime.bStart = FALSE ;
 
@@ -2034,9 +2210,13 @@ void CPlayer::ReviveLogIn_Normal()
 
 }
 
+
+
+
+
 //-------------------------------------------------------------------------------------------------
 //	NAME		: ReviveLogIn_GuildDungeon
-//	DESC		: ê³µì„± ê¸¸ë“œë˜ì „ì—ì„œì˜ ì•ˆì „ì§€ëŒ€ ë¶€í™œ í•¨ìˆ˜.
+//	DESC		: °ø¼º ±æµå´øÀü¿¡¼­ÀÇ ¾ÈÀüÁö´ë ºÎÈ° ÇÔ¼ö.
 //	PROGRAMMER	: Yongs Lee
 //	DATE		: December 10, 2008
 //-------------------------------------------------------------------------------------------------
@@ -2044,19 +2224,21 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 {
 	BYTE byCheckRevivePoint = TRUE ;
 
-	// ë¶€í™œì°½ì´ í•„ìš”í•˜ë‹¤ê³  ì„¸íŒ…í•œë‹¤.
+	// ºÎÈ°Ã¢ÀÌ ÇÊ¿äÇÏ´Ù°í ¼¼ÆÃÇÑ´Ù.
 	m_bNeedRevive = TRUE ;
 
-	// ë¶€í™œ ë©”ì‹œì§€ë¥¼ ì„¸íŒ…í•œë‹¤.
+
+	// ºÎÈ° ¸Ş½ÃÁö¸¦ ¼¼ÆÃÇÑ´Ù.
 	MOVE_POS msg ;
 
 	msg.Category	= MP_USERCONN ;
-	msg.Protocol	= MP_USERCONN_CHARACTER_REVIVE;
+	msg.Protocol	= MP_USERCONN_CHARACTER_REVIVE ;
 
 	msg.dwObjectID	= GetID() ;
 	msg.dwMoverID	= GetID() ;
 
-	// Playerê°€ ë£¨ì‰”ì„± ê¸¸ë“œ ì†Œì†ì¸ì§€ ì œë·˜ì„± ê¸¸ë“œ ì†Œì†ì¸ì§€ í™•ì¸í•œë‹¤.
+	
+	// Player°¡ ·ç½¨¼º ±æµå ¼Ò¼ÓÀÎÁö Á¦ºá¼º ±æµå ¼Ò¼ÓÀÎÁö È®ÀÎÇÑ´Ù.
 	VillageWarp* pRevivePoint	= NULL ;
 
 	DWORD dwGuildID				= GetGuildIdx() ;
@@ -2066,7 +2248,7 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 		sprintf( szMsg, "This player is not in guild! - %s,%d", GetObjectName(), GetID() ) ;
 		SIEGEWARFAREMGR->WriteLog(szMsg) ;
 
-		// 081217 LYW --- Player : ê³µì„± ê¸¸ë“œ ë˜ì „ì—ì„œ ê¸¸ë“œ ì†Œì† ì—†ì´ ì‚¬ë§ì‹œ, ìºë¦­í„° ì„ íƒ í™”ë©´ìœ¼ë¡œ ì´ë™í•˜ëŠ” ì²˜ë¦¬ ì¶”ê°€.
+		// 081217 LYW --- Player : °ø¼º ±æµå ´øÀü¿¡¼­ ±æµå ¼Ò¼Ó ¾øÀÌ »ç¸Á½Ã, Ä³¸¯ÅÍ ¼±ÅÃ È­¸éÀ¸·Î ÀÌµ¿ÇÏ´Â Ã³¸® Ãß°¡.
 		MSGBASE msg ;
 
 		msg.Category	= MP_SIEGEWARFARE ;
@@ -2082,12 +2264,12 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 	DWORD dwGuildID_Rushen		= SIEGEWARFAREMGR->GetCastleGuildIdx(eNeraCastle_Lusen) ;
 	DWORD dwGuildID_Zevyn		= SIEGEWARFAREMGR->GetCastleGuildIdx(eNeraCastle_Zebin) ;
 
-	// ë£¨ì‰”ì„± ê¸¸ë“œë¼ë©´,
+	// ·ç½¨¼º ±æµå¶ó¸é,
 	if( dwGuildID_Rushen == dwGuildID )
 	{
 		pRevivePoint = SIEGEWARFAREMGR->GetDGRP_Rushen() ;
 	}
-	// ì œë·˜ì„± ê¸¸ë“œë¼ë©´,
+	// Á¦ºá¼º ±æµå¶ó¸é,
 	else
 	{
 		if( dwGuildID_Zevyn == dwGuildID )
@@ -2097,11 +2279,11 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 		else
 		{
 			char szMsg[512] = {0, } ;
-			sprintf( szMsg, "Invalid guild idx! \n PLAYER_GUILD:%d / RUSHEN_GUILD:%d / ZEVYN_GUILD:%d",
+			sprintf( szMsg, "Invalid guild idx! \n PLAYER_GUILD:%d / RUSHEN_GUILD:%d / ZEVYN_GUILD:%d", 
 			dwGuildID, dwGuildID_Rushen, dwGuildID_Zevyn ) ;
 			SIEGEWARFAREMGR->WriteLog(szMsg) ;
 
-			// 081217 LYW --- Player : ê³µì„± ê¸¸ë“œ ë˜ì „ì—ì„œ ê¸¸ë“œ ì†Œì† ì—†ì´ ì‚¬ë§ì‹œ, ìºë¦­í„° ì„ íƒ í™”ë©´ìœ¼ë¡œ ì´ë™í•˜ëŠ” ì²˜ë¦¬ ì¶”ê°€.
+			// 081217 LYW --- Player : °ø¼º ±æµå ´øÀü¿¡¼­ ±æµå ¼Ò¼Ó ¾øÀÌ »ç¸Á½Ã, Ä³¸¯ÅÍ ¼±ÅÃ È­¸éÀ¸·Î ÀÌµ¿ÇÏ´Â Ã³¸® Ãß°¡.
 			MSGBASE msg ;
 
 			msg.Category	= MP_SIEGEWARFARE ;
@@ -2115,7 +2297,8 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 		}
 	}
 
-	// ë¶€í™œ ìœ„ì¹˜ë¥¼ ì„¸íŒ…í•œë‹¤.
+
+	// ºÎÈ° À§Ä¡¸¦ ¼¼ÆÃÇÑ´Ù.
 	VECTOR3 pos ;
 	int temp ;
 
@@ -2124,7 +2307,7 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 		if( !pRevivePoint )
 		{
 			char szMsg[512] = {0, } ;
-			sprintf( szMsg, "Failed to receive dungeon revive point! \n PLAYER_GUILD:%d / RUSHEN_GUILD:%d / ZEVYN_GUILD:%d",
+			sprintf( szMsg, "Failed to receive dungeon revive point! \n PLAYER_GUILD:%d / RUSHEN_GUILD:%d / ZEVYN_GUILD:%d", 
 				dwGuildID, dwGuildID_Rushen, dwGuildID_Zevyn ) ;
 			SIEGEWARFAREMGR->WriteLog(szMsg) ;
 			return ;
@@ -2142,29 +2325,32 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 	}
 
 	msg.cpos.Compress(&pos) ;
-
+	
 	CCharMove::SetPosition(this,&pos) ;
 
 	PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg)) ;
+		
 
-	// Playerì˜ ì£½ìŒ ìƒíƒœë¥¼ í•´ì œí•œë‹¤.
+	// PlayerÀÇ Á×À½ »óÅÂ¸¦ ÇØÁ¦ÇÑ´Ù.
 	OBJECTSTATEMGR_OBJ->EndObjectState(this,eObjectState_Die) ;
 
-	// ë¶€í™œ íŒ¨ë„í‹°ë¥¼ ì ìš©í•œë‹¤.
-	const LEVELTYPE curLevel = GetLevel() ;
 
+	// ºÎÈ° ÆĞ³ÎÆ¼¸¦ Àû¿ëÇÑ´Ù.
+	const LEVELTYPE curLevel = GetLevel() ;
+	
 	if(	curLevel >= 10 && !m_bDieForGFW && m_bNoExpPenaltyByPK == FALSE )
 	{
 		RevivePenalty(FALSE) ;
-
+		
 		if( !g_csDateManager.IsChallengeZoneHere() && g_pServerSystem->GetMapNum()!=GTMAPNUM )
 		{
-			// 090204 LUJ, ê°ì†Œ íšŒìˆ˜ë¥¼ ì§€ì •í•¨
+			// 090204 LUJ, °¨¼Ò È¸¼ö¸¦ ÁöÁ¤ÇÔ
             RemoveBuffCount( eBuffSkillCountType_Dead, 1 );
 		}
 	}
 
-	// ìƒí™©ì— ë”°ë¥¸ ìƒëª…ë ¥ì„ ì„¸íŒ…í•œë‹¤.
+
+	// »óÈ²¿¡ µû¸¥ »ı¸í·ÂÀ» ¼¼ÆÃÇÑ´Ù.
 	DWORD CurLife = GetMaxLife() ;
 	int nReviveVal = (int)(CurLife*0.3) ;
 
@@ -2177,7 +2363,8 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 
 	m_HeroCharacterInfo.Life = nReviveVal ;
 
-	// ìƒí™©ì— ë”°ë¥¸ ë§ˆë‚˜ë ¥ì„ ì„¸íŒ…í•œë‹¤.
+
+	// »óÈ²¿¡ µû¸¥ ¸¶³ª·ÂÀ» ¼¼ÆÃÇÑ´Ù.
 	DWORD MaxMana = GetMaxMana() ;
 
 	DWORD dwManaRate = (DWORD)(MaxMana*0.3) ;
@@ -2186,10 +2373,11 @@ void CPlayer::ReviveLogIn_GuildDungeon()
 		SetMana(dwManaRate) ;
 	}
 
-	// ë¬´ì ìƒíƒœ ì²˜ë¦¬ë¥¼ í•œë‹¤.
+
+	// ¹«Àû»óÅÂ Ã³¸®¸¦ ÇÑ´Ù.
 	OBJECTSTATEMGR_OBJ->StartObjectState(this,eObjectState_Immortal,0) ;
 	OBJECTSTATEMGR_OBJ->EndObjectState( this, eObjectState_Immortal, 30000 ) ;
-
+	
 	m_YYLifeRecoverTime.bStart = FALSE ;
 	m_YYManaRecoverTime.bStart = FALSE ;
 
@@ -2218,40 +2406,43 @@ void CPlayer::ReviveLogIn_GuildDungeon()
   SetRelifeStart();
 }
 
+
+
+
+
 void CPlayer::ReviveLogInPenelty()
 {
 	if( GetLevel() >= 10 && m_bNoExpPenaltyByPK == FALSE )
 	{
 		RevivePenalty(FALSE) ;
-// --- skr 20012020
-		//RevivePenalty(TRUE) ;
-
+		RevivePenalty(TRUE) ;
+		
 		if( !g_csDateManager.IsChallengeZoneHere() )
 		{
-			// 090204 LUJ, ê°ì†Œ íšŒìˆ˜ë¥¼ ì§€ì •?			RemoveBuffCount( eBuffSkillCountType_Dead, 1 );
+			// 090204 LUJ, °¨¼Ò È¸¼ö¸¦ ÁöÁ¤?			RemoveBuffCount( eBuffSkillCountType_Dead, 1 );
 		}
 	}
 
 	DWORD CurLife = GetMaxLife();
 	DWORD CurMana = GetMaxMana();
 
-	// 080625 LYW --- Player : ìƒëª…ë ¥ ì„¸íŒ…ì„ í•˜ë¼ê³  í•˜ë‚˜, ìºë¦­í„°ê°€ ì£½ì€ ìƒíƒœì´ê¸° ë•Œë¬¸ì—,
-	// ìƒëª…ë ¥ ì„¸íŒ… í•¨ìˆ˜ê°€ ê¸°ëŠ¥ì„ ì œëŒ€ë¡œ í•˜ì§€ ì•ŠëŠ”ë‹¤. ë•Œë¬¸ì—, ê°•ì œë¡œ ìƒëª…ë ¥ì„ ì„¸íŒ…í•˜ëŠ”
-	// í•¨ìˆ˜ë¡œ ë³€ê²½í•œë‹¤.
+	// 080625 LYW --- Player : »ı¸í·Â ¼¼ÆÃÀ» ÇÏ¶ó°í ÇÏ³ª, Ä³¸¯ÅÍ°¡ Á×Àº »óÅÂÀÌ±â ¶§¹®¿¡, 
+	// »ı¸í·Â ¼¼ÆÃ ÇÔ¼ö°¡ ±â´ÉÀ» Á¦´ë·Î ÇÏÁö ¾Ê´Â´Ù. ¶§¹®¿¡, °­Á¦·Î »ı¸í·ÂÀ» ¼¼ÆÃÇÏ´Â 
+	// ÇÔ¼ö·Î º¯°æÇÑ´Ù.
 	//SetLife((DWORD)(CurLife*0.3));
 	//SetMana(0);
 
-	// ìƒëª…ë ¥ ì„¸íŒ….
+	// »ı¸í·Â ¼¼ÆÃ.
 	DWORD dwNewLife = 0 ;
-	// 080710 LYW --- Player : ìƒëª…ë ¥ íšŒë³µ 50%ë¡œ ìˆ˜ì •.
+	// 080710 LYW --- Player : »ı¸í·Â È¸º¹ 50%·Î ¼öÁ¤.
 	//dwNewLife = (DWORD)(CurLife * 0.3f) ;
 	dwNewLife = (DWORD)(CurLife * 0.5f) ;
 
 	SetLifeForce(dwNewLife, TRUE) ;
 
-	// ë§ˆë‚˜ ì„¸íŒ….
+	// ¸¶³ª ¼¼ÆÃ.
 	DWORD dwNewMana = 0 ;
-	// 080710 LYW --- Player : ë§ˆë‚˜ íšŒë³µ 50%ë¡œ ìˆ˜ì •.
+	// 080710 LYW --- Player : ¸¶³ª È¸º¹ 50%·Î ¼öÁ¤.
 	//dwNewMana = (DWORD)(CurMana* 0.3f) ;
 	dwNewMana = (DWORD)(CurMana* 0.5f) ;
 
@@ -2259,6 +2450,7 @@ void CPlayer::ReviveLogInPenelty()
 
 	m_bDieForGFW = FALSE;
 }
+
 
 void CPlayer::DoDie(CObject* pAttacker)
 {
@@ -2286,9 +2478,28 @@ void CPlayer::DoDie(CObject* pAttacker)
 		if(pBattle->GetBattleKind() == eBATTLE_KIND_NONE || pAttacker->GetBattleID() != GetBattleID() )
 		{
 			// for pk
-			if( LOOTINGMGR->IsLootingSituation( this, pAttackPlayer ) )
+			if(STREETTOURNAMENTMGR->isStreetTournament() && STREETTOURNAMENTMGR->GetState() == 3)
 			{
-				LOOTINGMGR->CreateLootingRoom( this, (CPlayer*)pAttacker );
+				//update rank on db
+				//STUpdateRank(GetID(), m_STrank);
+				SetRegisterStreetTournament(FALSE);
+				m_bNoExpPenaltyByPK = TRUE;
+				SetReadyToRevive(TRUE);
+				SetDieForGFW( TRUE );
+
+			}
+			if(g_pServerSystem->GetMapNum() == PVP)
+			{
+				SetReadyToRevive(TRUE);
+			}
+			int randomLootPercent = 10;
+			int randomNum = rand() % 100;
+			if (randomNum < randomLootPercent && g_pServerSystem->GetMapNum()!=PVP)
+			{
+				if( LOOTINGMGR->IsLootingSituation( this, pAttackPlayer ) )
+				{
+					LOOTINGMGR->CreateLootingRoom( this, (CPlayer*)pAttacker );
+				}
 			}
 
 			if(pAttackPlayer->IsPKMode() == TRUE)
@@ -2313,12 +2524,21 @@ void CPlayer::DoDie(CObject* pAttacker)
 	}
 	else if(pAttacker->GetObjectKind() & eObjectKind_Monster )
 	{
+		if(STREETTOURNAMENTMGR->isStreetTournament() && STREETTOURNAMENTMGR->GetState() == 3)
+		{
+				//update rank on db
+				//STUpdateRank(GetID(), m_STrank);
+				SetRegisterStreetTournament(FALSE);
+				m_bNoExpPenaltyByPK = TRUE;
+				SetReadyToRevive(TRUE);
+				SetDieForGFW( TRUE );
+		}
 		m_MurdererKind = ((CMonster*)pAttacker)->GetMonsterKind();
-
-		// 080616 LUJ, í•¨ì •ì¼ ê²½ìš°ì—ëŠ” í˜ë„í‹°ë¥¼ ì£¼ì§€ ì•Šë„ë¡ í•œë‹¤
+			
+		// 080616 LUJ, ÇÔÁ¤ÀÏ °æ¿ì¿¡´Â Æä³ÎÆ¼¸¦ ÁÖÁö ¾Êµµ·Ï ÇÑ´Ù
 		if( pAttacker->GetObjectKind() != eObjectKind_Trap )
 		{
-			//SW060831 ë°©íŒŒ ë¹„ë¬´ ì‹œ //ê°•ì œ ì¢…ë£Œì‹œ ì²´í¬ ë³€ìˆ˜
+			//SW060831 ¹æÆÄ ºñ¹« ½Ã //°­Á¦ Á¾·á½Ã Ã¼Å© º¯¼ö
 			SetPenaltyByDie(TRUE);
 		}
 
@@ -2340,8 +2560,8 @@ void CPlayer::DoDie(CObject* pAttacker)
 	PKMGR->DiePanelty( this, pAttacker );
 
 //---KES Aggro 070918
-//---ì–´ê·¸ë¡œ ë¦¬ìŠ¤íŠ¸ ë¦´ë¦¬ìŠ¤
-	RemoveAllAggroed();	//*ì£¼ì˜: ì•„ë˜ FollowMonsterListí•´ì œí•˜ê¸° ì´ì „ì— í•´ì£¼ì–´ì•¼, ë‹¤ìŒ ì–´ê·¸ë¡œë¥¼ íƒ€ê²Ÿìœ¼ë¡œ ì¡ì„ ìˆ˜ ìˆë‹¤.
+//---¾î±×·Î ¸®½ºÆ® ¸±¸®½º
+	RemoveAllAggroed();	//*ÁÖÀÇ: ¾Æ·¡ FollowMonsterListÇØÁ¦ÇÏ±â ÀÌÀü¿¡ ÇØÁÖ¾î¾ß, ´ÙÀ½ ¾î±×·Î¸¦ Å¸°ÙÀ¸·Î ÀâÀ» ¼ö ÀÖ´Ù.
 //-------------------
 
 	CMonster * pObject = NULL;
@@ -2352,7 +2572,7 @@ void CPlayer::DoDie(CObject* pAttacker)
 	}
 	m_FollowMonsterList.RemoveAll();
 
-	//---KES ì£½ìœ¼ë©´ ì´ë™ì„ ë©ˆì¶°ì£¼ì–´ì•¼ í•œë‹¤.
+	//---KES Á×À¸¸é ÀÌµ¿À» ¸ØÃçÁÖ¾î¾ß ÇÑ´Ù.
 	if( CCharMove::IsMoving(this) )
 	{
 		VECTOR3 pos;
@@ -2362,10 +2582,10 @@ void CPlayer::DoDie(CObject* pAttacker)
 
 	QUESTMAPMGR->DiePlayer( this );
 
-	// desc_hseos_ë°ì´íŠ¸ ì¡´_01
-	// S ë°ì´íŠ¸ ì¡´ ì¶”ê°€ added by hseos 2007.11.29
+	// desc_hseos_µ¥ÀÌÆ® Á¸_01
+	// S µ¥ÀÌÆ® Á¸ Ãß°¡ added by hseos 2007.11.29
 	g_csDateManager.SRV_EndChallengeZone(this, CSHDateManager::CHALLENGEZONE_END_ALL_DIE);
-	// E ë°ì´íŠ¸ ì¡´ ì¶”ê°€ added by hseos 2007.11.29
+	// E µ¥ÀÌÆ® Á¸ Ãß°¡ added by hseos 2007.11.29
 
 	// 080725 KTH
 	SIEGEWARFAREMGR->CancelWaterSeedUsing(this);
@@ -2381,7 +2601,7 @@ void CPlayer::DoDie(CObject* pAttacker)
 		}
 	}
 
-	// 081020 LYW --- Player : ê³µì„±ì¤‘ ìºë¦­í„° ì‚¬ë§ì‹œ, Aê°€ Bë¥¼ ì£½ì˜€ë‹¤ëŠ” ë§µ ê³µì§€ ë¸Œë¡œë“œìºìŠ¤íŒ… ì²˜ë¦¬ ì¶”ê°€. - ì†¡ê°€ëŒ.
+	// 081020 LYW --- Player : °ø¼ºÁß Ä³¸¯ÅÍ »ç¸Á½Ã, A°¡ B¸¦ Á×¿´´Ù´Â ¸Ê °øÁö ºê·ÎµåÄ³½ºÆÃ Ã³¸® Ãß°¡. - ¼Û°¡¶÷.
 	if( SIEGEWARFAREMGR->IsSiegeWarfareZone(g_pServerSystem->GetMapNum()) )
 	{
 		MSG_DWORD2 msg ;
@@ -2399,8 +2619,11 @@ void CPlayer::DoDie(CObject* pAttacker)
 
 	SetSummonedVehicle( 0 );
 	SetMountedVehicle( 0 );
+	
+	CObject* forfindsumon = (CObject*)this;
+	forfindsumon->RemoveSummonedAll();
 
-	// 100621 ShinJS ì‚¬ë§ì‹œ í˜„ì¬ ì‹œì „ì¤‘ì¸ ìŠ¤í‚¬ì„ ì·¨ì†Œì‹œí‚¨ë‹¤.
+	// 100621 ShinJS »ç¸Á½Ã ÇöÀç ½ÃÀüÁßÀÎ ½ºÅ³À» Ãë¼Ò½ÃÅ²´Ù.
 	CancelCurrentCastingSkill( FALSE );
 }
 
@@ -2411,7 +2634,7 @@ float CPlayer::DoGetMoveSpeed()
 		return 0;
 	}
 
-	// 090422 ShinJS --- íƒˆê²ƒì˜ Masterì´ê³  íƒ‘ìŠ¹ì¤‘ì¸ ê²½ìš° íƒˆê²ƒì˜ ì´ë™ì†ë„ ì´ìš©
+	// 090422 ShinJS --- Å»°ÍÀÇ MasterÀÌ°í Å¾½ÂÁßÀÎ °æ¿ì Å»°ÍÀÇ ÀÌµ¿¼Óµµ ÀÌ¿ë
 	{
 		CObject* const vehicleObject = g_pUserTable->FindUser( GetSummonedVehicle() );
 
@@ -2424,15 +2647,20 @@ float CPlayer::DoGetMoveSpeed()
 
 	float speed = float( m_MoveInfo.MoveMode == eMoveMode_Run ? RUNSPEED : WALKSPEED );
 
-	// 080630 LUJ, ì„¸íŠ¸ ì•„ì´í…œ ìˆ˜ì¹˜ê°€ ì ìš©ë˜ë„ë¡ í•¨
+	// 080630 LUJ, ¼¼Æ® ¾ÆÀÌÅÛ ¼öÄ¡°¡ Àû¿ëµÇµµ·Ï ÇÔ
 	float addrateval = ( GetRateBuffStatus()->MoveSpeed + GetRatePassiveStatus()->MoveSpeed ) / 100.f + m_itemBaseStats.mMoveSpeed.mPercent + m_itemOptionStats.mMoveSpeed.mPercent + m_SetItemStats.mMoveSpeed.mPercent;
 	float addval = GetBuffStatus()->MoveSpeed + GetPassiveStatus()->MoveSpeed + m_itemBaseStats.mMoveSpeed.mPlus + m_itemOptionStats.mMoveSpeed.mPlus + m_SetItemStats.mMoveSpeed.mPlus;
 
 	m_MoveInfo.AddedMoveSpeed = speed * addrateval + addval;
 
 	speed += m_MoveInfo.AddedMoveSpeed;
+
+	if(g_pServerSystem->GetMapNum() == GTMAPNUM)
+		speed *= 0.8f;
+	
 	return max( 0, speed );
 }
+
 
 void CPlayer::SetInitedGrid()
 {
@@ -2442,7 +2670,7 @@ void CPlayer::SetInitedGrid()
 	SendMsg(&msg,sizeof(msg));
 
 	CGridUnit::SetInitedGrid();
-
+	
 	CBattle* pBattle = BATTLESYSTEM->GetBattle(this->GetBattleID());
 	if(pBattle && pBattle->GetBattleKind() != eBATTLE_KIND_NONE)
 		BATTLESYSTEM->AddObjectToBattle(pBattle, this);
@@ -2457,19 +2685,19 @@ void CPlayer::SetInitedGrid()
 		QUESTMGR->AddQuestEvent( this, &QEvent );
 	}
 
-	// 090316 LUJ, íƒˆê²ƒì— íƒ‘ìŠ¹í•œ ì±„ë¡œ ë§µ ì´ë™í•œ ê²½ìš° ìë™ìœ¼ë¡œ íƒœìš°ê¸° ìœ„í•´ ì •ë³´ë¥¼ ê°€ì ¸ì˜¨ë‹¤
+	// 090316 LUJ, Å»°Í¿¡ Å¾½ÂÇÑ Ã¤·Î ¸Ê ÀÌµ¿ÇÑ °æ¿ì ÀÚµ¿À¸·Î ÅÂ¿ì±â À§ÇØ Á¤º¸¸¦ °¡Á®¿Â´Ù
 	LoadVehicleFromDb( GetID(), g_pServerSystem->GetMapNum() );
 }
-// RaMa - 04.11.10    -> ShopItemOption ì¶”ê°€   AvatarOptionì¶”ê°€(05.02.16)
+// RaMa - 04.11.10    -> ShopItemOption Ãß°¡   AvatarOptionÃß°¡(05.02.16)
 DWORD CPlayer::DoGetCritical()
-{
+{	
 	return (DWORD)mCriticalRate;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// 06. 07 ë‚´ê³µ ì ì¤‘(ì¼ê²©) - ì´ì˜ì¤€
+// 06. 07 ³»°ø ÀûÁß(ÀÏ°İ) - ÀÌ¿µÁØ
 DWORD CPlayer::DoGetDecisive()
-{
+{	
 	return (DWORD)mCriticalRate;
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2498,7 +2726,7 @@ void CPlayer::DoDamage(CObject* pAttacker,RESULTINFO* pDamageInfo,DWORD beforeLi
 		EndBuffSkillByStatus( eStatusKind_Slip );
 	}
 
-	// 090109 LUJ, í”¼ê²© ì‹œ ìºìŠ¤íŒ… ì¤‘ì¸ ìŠ¤í‚¬ì´ ì·¨ì†Œë  ìˆ˜ ìˆë‹¤
+	// 090109 LUJ, ÇÇ°İ ½Ã Ä³½ºÆÃ ÁßÀÎ ½ºÅ³ÀÌ Ãë¼ÒµÉ ¼ö ÀÖ´Ù
 	CancelCurrentCastingSkill( TRUE );
 }
 
@@ -2515,7 +2743,7 @@ void CPlayer::DoManaDamage( CObject* pAttacker, RESULTINFO* pDamageInfo, DWORD b
 		EndBuffSkillByStatus( eStatusKind_Slip );
 	}
 
-	// 090109 LUJ, í”¼ê²© ì‹œ ìºìŠ¤íŒ… ì¤‘ì¸ ìŠ¤í‚¬ì´ ì·¨ì†Œë  ìˆ˜ ìˆë‹¤
+	// 090109 LUJ, ÇÇ°İ ½Ã Ä³½ºÆÃ ÁßÀÎ ½ºÅ³ÀÌ Ãë¼ÒµÉ ¼ö ÀÖ´Ù
 	CancelCurrentCastingSkill( TRUE );
 }
 
@@ -2525,7 +2753,7 @@ void CPlayer::InitBaseObjectInfo(BASEOBJECT_INFO* pBaseInfo)
 	memcpy(&m_BaseObjectInfo,pBaseInfo,sizeof(BASEOBJECT_INFO));
 }
 
-/* Â¨oCÂ¨ï¿¢?EÂ¡â“’Â¡Â¤ï¿ c Return */
+/* ¡§oC¡§¡ş?E¢®¨Ï¢®¢´¡Ëc Return */
 MONEYTYPE CPlayer::SetMoney( MONEYTYPE ChangeValue, BYTE bOper, BYTE MsgFlag, eITEMTABLE tableIdx, BYTE LogType, DWORD TargetIdx )
 {
 	CPurse* pPurse = m_ItemContainer.GetPurse(tableIdx);
@@ -2550,7 +2778,7 @@ MONEYTYPE CPlayer::SetMoney( MONEYTYPE ChangeValue, BYTE bOper, BYTE MsgFlag, eI
 	return Real;
 }
 
-/* ï¿¥iÂ¡Â¤; â“’Ã¸O; Aâ“’Â¡Â¨ï¿¢Â¨ï¿ CN Â¡Ã†â“’ÂªÂ¡Ã†Â¡IAI AOï¿ ï¿¥AAoï¿ ï¿¢| â“’o?ï¿ ï¿¥Aï¿ ï¿¥U.*/
+/* ¡Íi¢®¢´; ¨Ï©ªO; A¨Ï¢®¡§¡ş¡§¡ËCN ¢®¨¡¨Ï¨£¢®¨¡¢®IAI AO¡Ë¡ÍAAo¡Ë¡ş| ¨Ïo?¡Ë¡ÍA¡Ë¡ÍU.*/
 BOOL CPlayer::IsEnoughAdditionMoney(MONEYTYPE money, eITEMTABLE tableIdx )
 {
 	CPurse* pPurse = m_ItemContainer.GetPurse(tableIdx);
@@ -2559,6 +2787,7 @@ BOOL CPlayer::IsEnoughAdditionMoney(MONEYTYPE money, eITEMTABLE tableIdx )
 	return pPurse->IsAdditionEnough( money );
 }
 
+
 MONEYTYPE CPlayer::GetMaxPurseMoney(eITEMTABLE TableIdx)
 {
 	CPurse* pPurse = m_ItemContainer.GetPurse(TableIdx);
@@ -2566,9 +2795,9 @@ MONEYTYPE CPlayer::GetMaxPurseMoney(eITEMTABLE TableIdx)
 	return pPurse->GetMaxMoney();
 }
 
-void CPlayer::SetMaxPurseMoney(eITEMTABLE TableIdx, DWORD MaxMoney)
+void CPlayer::SetMaxPurseMoney(eITEMTABLE TableIdx, MONEYTYPE MaxMoney)
 {
-	//CÂ¡IÂ¡Â¾â“’o; Â¡icï¿ ï¿¢e ï¿¥iÂ¡Â¤ Â¨ï¿¢ï¿ ï¿¢Â¡Ã†u ï¿ ï¿¢Â¨Â¡Â¨oÂ¨ï¿¢Aï¿ Â®Â¡Ã†ï¿ Â® ï¿ ï¿¥AÂ¨uiâ“’Ã¸Â¡â“’ï¿ ï¿¥U.
+	//C¢®I¢®¨ú¨Ïo; ¢®ic¡Ë¡şe ¡Íi¢®¢´ ¡§¡ş¡Ë¡ş¢®¨¡u ¡Ë¡ş¡§¢®¡§o¡§¡şA¡Ë¢ç¢®¨¡¡Ë¢ç ¡Ë¡ÍA¡§ui¨Ï©ª¢®¨Ï¡Ë¡ÍU.
 	if(TableIdx != eItemTable_Storage)
 	{
 		ASSERT(0);
@@ -2596,10 +2825,10 @@ BOOL CPlayer::SetQuestState(DWORD QuestIdx, QSTATETYPE value)
 	CQuestBase* pQuest;
 	pQuest = m_QuestList.GetData(QuestIdx);
 
-	if( !pQuest )
+	if( !pQuest ) 
 	{
 //		char buff[256] = {0,};
-//		sprintf(buff, "ï¿ ?aÂ¡Â¾aï¿ ï¿¥A AuÂ¨oÂ¨ï¿¢Â¨Â¡ï¿ cÂ¡Ã†ï¿ Â® xAc Â¨uECNï¿ ï¿¥Uâ“’Ã¸â“’ï¿¢ CIï¿ ?Â¨IÂ¡Ã†Â¡I â“’oyÂ¨uï¿ cï¿ ?ï¿ Â®Â¡Ã†O Â¨uEÂ¡Â¤AAaï¿ ?Â¡Ã† [QUEST ID : %d]", QuestIdx);
+//		sprintf(buff, "¡Ë?a¢®¨úa¡Ë¡ÍA Au¡§o¡§¡ş¡§¢®¡Ëc¢®¨¡¡Ë¢ç xAc ¡§uECN¡Ë¡ÍU¨Ï©ª¨Ï¡ş CI¡Ë?¡§I¢®¨¡¢®I ¨Ïoy¡§u¡Ëc¡Ë?¡Ë¢ç¢®¨¡O ¡§uE¢®¢´AAa¡Ë?¢®¨¡ [QUEST ID : %d]", QuestIdx);
 //		ASSERTMSG(0, buff);
 		return FALSE;
 	}
@@ -2607,7 +2836,7 @@ BOOL CPlayer::SetQuestState(DWORD QuestIdx, QSTATETYPE value)
 	pQuest->SetValue(value);
 	BOOL bEnd = pQuest->IsComplete();
 
-	// DBï¿ ?ï¿ Â® Â¨uAÂ¨Â¡ACNï¿ ï¿¥U.
+	// DB¡Ë?¡Ë¢ç ¡§uA¡§¢®ACN¡Ë¡ÍU.
 	QuestUpdateToDB( GetID(), QuestIdx, value, (BYTE)bEnd );
 
 	if( bEnd )
@@ -2631,7 +2860,8 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 {
 	m_initState |= initstate;
 
-	// 091106 LUJ, ë³µì¡í•œ ifë¬¸ ì²˜ë¦¬ë¥¼ ê°„ê²°í™”
+
+	// 091106 LUJ, º¹ÀâÇÑ if¹® Ã³¸®¸¦ °£°áÈ­
 	if(FALSE == (m_initState & PLAYERINITSTATE_ONLY_ADDED))
 	{
 		return;
@@ -2680,7 +2910,7 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 	{
 		const ITEMBASE * pTargetItemBase = ITEMMGR->GetItemInfoAbsIn(this, part);
 
-		if( pTargetItemBase &&
+		if( pTargetItemBase && 
 			pTargetItemBase->dwDBIdx )
 		{
 			m_HeroCharacterInfo.WearedItemIdx[part-TP_WEAR_START] = pTargetItemBase->wIconIdx;
@@ -2705,7 +2935,7 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 
 	m_dwProgressTime = gCurTime;
 
-	// LUJ, í´ë¼ì´ì–¸íŠ¸ì— ì „ì†¡í•˜ê¸° ì „ì— ê³„ì‚°í•´ì•¼í•œë‹¤
+	// LUJ, Å¬¶óÀÌ¾ğÆ®¿¡ Àü¼ÛÇÏ±â Àü¿¡ °è»êÇØ¾ßÇÑ´Ù
 	CHARCALCMGR->Initialize(
 		this);
 
@@ -2719,10 +2949,11 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 		GETITEM_FLAG_INVENTORY | GETITEM_FLAG_WEAR);
 	GetSendMoveInfo(&msg.SendMoveInfo,NULL);
 
+
 	msg.ChrTotalInfo.CurMapNum = GAMERESRCMNGR->GetLoadMapNum();
 	msg.UniqueIDinAgent = GetUniqueIDinAgent();
 
-	SKILL_BASE SkillTreeInfo[MAX_SKILL_TREE] = {0};
+	SKILL_BASE SkillTreeInfo[MAX_SKILL_TREE] = {0};	
 	m_SkillTree->SetPositionHead();
 
 	for(SKILL_BASE* skill = m_SkillTree->GetData();
@@ -2744,11 +2975,12 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 		SkillTreeInfo,
 		__FUNCTION__);
 	msg.ChrTotalInfo.DateMatching = m_DateMatching;
+	msg.ChrTotalInfo.AliasType = m_AliasType;
 
 	srand( GetTickCount());
 	GetLocalTime(&msg.ServerTime);
 
-	// 080827 LYW --- Player : ê³µì„± ìƒíƒœë¥¼ ìœ ì €ì—ê²Œ(Client)ë¡œ ì „ì†¡í•œë‹¤.
+	// 080827 LYW --- Player : °ø¼º »óÅÂ¸¦ À¯Àú¿¡°Ô(Client)·Î Àü¼ÛÇÑ´Ù.
 	msg.Category	= MP_USERCONN;
 	msg.Protocol	= MP_USERCONN_GAMEIN_ACK;
 
@@ -2763,14 +2995,42 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 	msgFishingExp.dweData2 = m_dwFishingExp;
 	SendMsg( &msgFishingExp, sizeof(msgFishingExp) );
 
-	// 080424 NYJ --- ë¬¼ê³ ê¸°í¬ì¸íŠ¸
+	// 080424 NYJ --- ¹°°í±âÆ÷ÀÎÆ®
 	MSG_DWORD msgFishPoint;
 	msgFishPoint.Category = MP_FISHING;
 	msgFishPoint.Protocol = MP_FISHING_POINT_ACK;
 	msgFishPoint.dwData   = m_dwFishPoint;
 	SendMsg( &msgFishPoint, sizeof(msgFishPoint) );
 
-	// ìš”ë¦¬ìˆ™ë ¨ë„
+	//aziz MallShop 24
+	MSG_DWORD msgVipPoint;
+	msgVipPoint.Category = MP_VIP;
+	msgVipPoint.Protocol = MP_VIP_POINT_ACK;
+	msgVipPoint.dwData   = m_dwVipPoint;
+	SendMsg( &msgVipPoint, sizeof(msgVipPoint) );
+
+	//aziz Reborn 24 Sep
+	MSG_DWORD msgRebornData;
+	msgRebornData.Category = MP_REBORN;
+	msgRebornData.Protocol = MP_REBORN_DATA_ACK;
+	msgRebornData.dwData   = m_dwRebornData;
+	SendMsg( &msgRebornData, sizeof(msgRebornData) );
+
+	//aziz Kill Shop 30 Sep
+	MSG_DWORD msgKillPoint;
+	msgKillPoint.Category = MP_KILL;
+	msgKillPoint.Protocol = MP_KILL_POINT_ACK;
+	msgKillPoint.dwData   = m_dwKillPoint;
+	SendMsg( &msgKillPoint, sizeof(msgKillPoint) );
+
+	//aziz Reborn Point 13 Oct
+	MSG_DWORD msgRebornPoint;
+	msgRebornPoint.Category = MP_UTILITY;
+	msgRebornPoint.Protocol = MP_REBORNPOINT_ACK;
+	msgRebornPoint.dwData   = m_dwRebornPoint;
+	SendMsg( &msgRebornPoint, sizeof(msgRebornPoint) );
+	
+	// ¿ä¸®¼÷·Ãµµ
 	MSG_DWORD4 msgCookState;
 	msgCookState.Category = MP_COOK;
 	msgCookState.Protocol = MP_COOK_STATE;
@@ -2780,7 +3040,7 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 	msgCookState.dwData4 = GetFireCount();
 	SendMsg( &msgCookState, sizeof(msgCookState) );
 
-	// ìš”ë¦¬ë‹¬ì¸ë ˆì‹œí”¼
+	// ¿ä¸®´ŞÀÎ·¹½ÃÇÇ
 	int i;
 	for(i=0; i<MAX_RECIPE_LV4_LIST; i++)
 	{
@@ -2801,7 +3061,7 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 	msgMapDesc.Category		= MP_USERCONN;
 	msgMapDesc.Protocol		= MP_USERCONN_MAPDESC;
 	msgMapDesc.wData1		= (WORD)g_pServerSystem->GetMap()->IsVillage();
-	// 090824 ONS GMíˆ´ì—ì„œ PKì œì–´ì‹œ ì„¤ì •ëœ PKí—ˆìš©ê°’.
+	// 090824 ONS GMÅø¿¡¼­ PKÁ¦¾î½Ã ¼³Á¤µÈ PKÇã¿ë°ª.
 	msgMapDesc.wData2		= (WORD)PKMGR->IsPKAllow();
 	msgMapDesc.wData3		= (WORD)GetCurChannel();
 	SendMsg( &msgMapDesc, sizeof(msgMapDesc) );
@@ -2823,7 +3083,7 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 	QUICKMNGR->SendQuickInfo(
 		this);
 
-	// S ëª¬ìŠ¤í„°ë¯¸í„° ì¶”ê°€ added by hseos 2007.05.29
+	// S ¸ó½ºÅÍ¹ÌÅÍ Ãß°¡ added by hseos 2007.05.29
 	{
 		MSG_DWORD2 msg;
 		msg.Category	= MP_CHAR;
@@ -2837,13 +3097,13 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 		msg.dwData1		= m_stMonstermeterInfo.nKillMonsterNum;
 		msg.dwData2		= m_stMonstermeterInfo.nKillMonsterNumTotal;
 		SendMsg(&msg, sizeof(msg));
-		// íŠ¸ë¦¬ê±°ë¥¼ ì½ì–´ë“¤ì¸ë‹¤
+		// Æ®¸®°Å¸¦ ÀĞ¾îµéÀÎ´Ù
 		TRIGGERMGR->LoadTrigger(*this);
 	}
 
 	g_csFarmManager.SRV_SendPlayerFarmInfo(this);
 	g_csDateManager.SRV_SendChallengeZoneEnterFreq(this);
-	// 091106 LUJ, ë¦¬ë¯¸íŠ¸ ë˜ì ¼ì— ë“±ë¡ì‹œí‚¨ë‹¤
+	// 091106 LUJ, ¸®¹ÌÆ® ´øÁ¯¿¡ µî·Ï½ÃÅ²´Ù
 	LIMITDUNGEONMGR->AddPlayer(*this);
 	GUILDMGR->AddPlayer( this );
 	GUILDWARMGR->AddPlayer( this );
@@ -2865,7 +3125,7 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 			CCharMove::GetPosition(this));
 	}
 
-	// 100408 ShinJS --- ì„œë²„ ì‹œê°„ ì „ì†¡
+	// 100408 ShinJS --- ¼­¹ö ½Ã°£ Àü¼Û
 	stTime64t serverTimeMsg;
 	ZeroMemory( &serverTimeMsg, sizeof(serverTimeMsg) );
 	serverTimeMsg.Category = MP_USERCONN;
@@ -2886,33 +3146,104 @@ void CPlayer::SetInitState(int initstate,DWORD protocol)
 			g_pServerSystem->GetMapNum());
 	}
 
-	// 100525 NYJ - íŒë§¤ëŒ€í–‰ ë“±ë¡ìƒí’ˆì— ëŒ€í•´ ì‹œê°„ê²½ê³¼ì²´í¬ ìˆ˜í–‰
+	// 100525 NYJ - ÆÇ¸Å´ëÇà µî·Ï»óÇ°¿¡ ´ëÇØ ½Ã°£°æ°úÃ¼Å© ¼öÇà
 	Consignment_CheckDate(GetID());
 	Note_CheckDate(GetID());
 
-	// 100611 ONS ë¡œê·¸ì¸ì‹œ ì±„íŒ…ê¸ˆì§€ ì •ë³´ë¥¼ ë¡œë“œí•œë‹¤.
+	// 100611 ONS ·Î±×ÀÎ½Ã Ã¤ÆÃ±İÁö Á¤º¸¸¦ ·ÎµåÇÑ´Ù.
 	ForbidChatLoad(GetID());
+	if(g_pServerSystem->GetMapNum() == PVP_MAP)
+	{
+		if(CParty* pParty = PARTYMGR->GetParty(GetPartyIdx()))
+		{
+			if(pParty->GetMasterID() == GetID())
+			{
+					PARTYMGR->BreakupParty(pParty->GetPartyIdx(), GetID());
+			}
+			else
+			{
+				PARTYMGR->DelMember(GetID(), pParty->GetPartyIdx());
+			}
+		}
+
+		if(CPet* const petObject = PETMGR->GetPet(GetPetItemDbIndex()))
+		{
+			PETMGR->SealPet(petObject);
+		}
+
+		CVehicle* const vehicle = ( CVehicle* )g_pUserTable->FindUser( GetSummonedVehicle() );
+
+		if( vehicle && vehicle->GetObjectKind() == eObjectKind_Vehicle )
+		{
+			VEHICLEMGR->Unsummon( GetID(), TRUE );
+		} 
+
+		if( GetState() == eObjectState_Immortal )
+		{
+			OBJECTSTATEMGR_OBJ->EndObjectState( this, eObjectState_Immortal );
+		} else {
+			OBJECTSTATEMGR_OBJ->StartObjectState(this, eObjectState_BattleReady, 0);
+		}
+	}
+
+	if(STREETTOURNAMENTMGR->isStreetTournament())
+	{
+		if(STREETTOURNAMENTMGR->GetState() == 0 || !IsRegisterStreetTournament() )//|| !allowedstbyrebirth)
+		{
+			STREETTOURNAMENTMGR->MoveToAlker(this, TRUE);
+		} else 
+		{
+			if(CParty* pParty = PARTYMGR->GetParty(GetPartyIdx()))
+			{
+				if(pParty->GetMasterID() == GetID())
+				{
+						PARTYMGR->BreakupParty(pParty->GetPartyIdx(), GetID());
+				}
+				else
+				{
+					PARTYMGR->DelMember(GetID(), pParty->GetPartyIdx());
+				}
+			}
+
+			if(CPet* const petObject = PETMGR->GetPet(GetPetItemDbIndex()))
+			{
+				PETMGR->SealPet(petObject);
+			}
+
+			CVehicle* const vehicle = ( CVehicle* )g_pUserTable->FindUser( GetSummonedVehicle() );
+
+			if( vehicle && vehicle->GetObjectKind() == eObjectKind_Vehicle )
+			{
+				VEHICLEMGR->Unsummon( GetID(), TRUE );
+			} 
+		}
+	}
+
 }
 
-int CPlayer::CanExitStart()	//~Â¡Â¤avÂ¡Ã†C
+int CPlayer::CanExitStart()	//~¢®¢´av¢®¨¡C
 {
 //	if( GetState() != eObjectState_None && GetState() != eObjectState_Move )
 //		return FALSE;
-	if( IsPKMode() )
+//	if( IsPKMode() )
+	if( IsPKMode() && g_pServerSystem->GetMapNum()!=PVP)
 		return eEXITCODE_PKMODE;
-	if( LOOTINGMGR->IsLootedPlayer(GetID()) )	//PKÂ¡Â¤cÂ¨Â¡A; ï¿ ï¿¥cCIï¿ ï¿¥A Aâ“’ï¿¢AIÂ¡Ã†ï¿ Â®?
+	if( LOOTINGMGR->IsLootedPlayer(GetID()) )	//PK¢®¢´c¡§¢®A; ¡Ë¡ÍcCI¡Ë¡ÍA A¨Ï¡şAI¢®¨¡¡Ë¢ç?
 		return eEXITCODE_LOOTING;
 
-	if( GetState() == eObjectState_Exchange )	//Â±Â³E?AÃŸÂ¿ï¿¡ AÂ¾Â·aCO Â¼o Â¾Ã¸Â´U.
+	if( GetState() == eObjectState_Exchange )	//¡¾©øE?A©¬¢¯¡Ì A¨ú¡¤aCO ¨ùo ¨ú©ª¢¥U.
 		return eEXITCODE_NOT_ALLOW_STATE;
 
 	if( GetState() == eObjectState_StreetStall_Owner ||
-		GetState() == eObjectState_StreetStall_Guest )	//Â³eAÂ¡AÃŸÂ¿ï¿¡ AÂ¾Â·aCO Â¼o Â¾Ã¸Â´U.
+		GetState() == eObjectState_StreetStall_Guest )	//©øeA¢®A©¬¢¯¡Ì A¨ú¡¤aCO ¨ùo ¨ú©ª¢¥U.
 		return eEXITCODE_NOT_ALLOW_STATE;
 
-	if( GetState() == eObjectState_Deal )	//â‰«oAÂ¡ AIÂ¿eAÃŸÂ¿ï¿¡ AÂ¾Â·aCO Â¼o Â¾Ã¸Â´U.
+	if( GetState() == eObjectState_Deal )	//¡íoA¢® AI¢¯eA©¬¢¯¡Ì A¨ú¡¤aCO ¨ùo ¨ú©ª¢¥U.
 		return eEXITCODE_NOT_ALLOW_STATE;
 
+	if(g_pServerSystem->GetMapNum() == StreetTournament)
+		return eEXITCODE_NOT_ALLOW_STATE;
+	
 	return eEXITCODE_OK;
 }
 
@@ -2925,19 +3256,20 @@ void CPlayer::SetExitStart( BOOL bExit )
 int CPlayer::CanExit()
 {
 	DWORD lCurTime = MHTIMEMGR_OBJ->GetNewCalcCurTime();
-	if( lCurTime - m_dwExitStartTime < EXIT_COUNT*1000 - 2000 )	//8.0	//ë²„í¼ë¥¼ ì¶©ë¶„íˆ ì¡ì
+	if( lCurTime - m_dwExitStartTime < EXIT_COUNT*1000 - 2000 )	//8.0	//¹öÆÛ¸¦ ÃæºĞÈ÷ ÀâÀÚ
 		return eEXITCODE_SPEEDHACK;
 
-	if( IsPKMode() )							//PKï¿ ï¿¢â“’ï¿¡ï¿¥iaAIÂ¡Ã†ï¿ Â®?
+//	if( IsPKMode() )							//PK¡Ë¡ş¨Ï¡Ì¡ÍiaAI¢®¨¡¡Ë¢ç?
+	if( IsPKMode() && g_pServerSystem->GetMapNum()!=PVP)							//PK¡Ë¡ş¨Ï¡Ì¡ÍiaAI¢®¨¡¡Ë¢ç?
 		return eEXITCODE_PKMODE;
-	if( LOOTINGMGR->IsLootedPlayer(GetID()) )	//PKÂ¡Â¤cÂ¨Â¡A; ï¿ ï¿¥cCIï¿ ï¿¥A Aâ“’ï¿¢AIÂ¡Ã†ï¿ Â®?
+	if( LOOTINGMGR->IsLootedPlayer(GetID()) )	//PK¢®¢´c¡§¢®A; ¡Ë¡ÍcCI¡Ë¡ÍA A¨Ï¡şAI¢®¨¡¡Ë¢ç?
 		return eEXITCODE_LOOTING;
 
 //---KES AUTONOTE
 	if( GetAutoNoteIdx() )
 		return eEXITCODE_NOT_ALLOW_STATE;
 //---------------
-
+	
 	return eEXITCODE_OK;
 }
 
@@ -2950,27 +3282,27 @@ void CPlayer::ExitCancel()
 		msgNack.Category	= MP_CHAR;
 		msgNack.Protocol	= MP_CHAR_EXIT_NACK;
 		msgNack.bData		= eEXITCODE_DIEONEXIT;
-		SendMsg(&msgNack, sizeof(msgNack));
+		SendMsg(&msgNack, sizeof(msgNack));		
 	}
 }
 
 int CPlayer::PKModeOn()
 {
-	if( IsPKMode() ) return ePKCODE_ALREADYPKMODEON;		//AIâ“’oI PKï¿ ï¿¢â“’ï¿¡ï¿¥ia
-	if( IsShowdown() ) return ePKCODE_SHOWDOWN;		//Â¨ï¿¢nâ“’oÂ¡iAâ“’ï¿¢AIï¿ ï¿¢e Â¨uEï¿¥iEï¿ ï¿¥U
+	if( IsPKMode() ) return ePKCODE_ALREADYPKMODEON;		//AI¨ÏoI PK¡Ë¡ş¨Ï¡Ì¡Íia
+	if( IsShowdown() ) return ePKCODE_SHOWDOWN;		//¡§¡şn¨Ïo¢®iA¨Ï¡şAI¡Ë¡şe ¡§uE¡ÍiE¡Ë¡ÍU
 
-	//pkÂ¸Ã°Î¼a AÂ°Â¸e Â¹â‰ªAuâ‰«oAA CÃ˜A|
+	//pk¢¬©£¥ìa A¡Æ¢¬e ©ö¡ìAu¡íoAA C¨ªA|
 	if( GetState() == eObjectState_Immortal )
 		OBJECTSTATEMGR_OBJ->EndObjectState( this, eObjectState_Immortal );
 
 	if( GetState() == eObjectState_Die )
-		return ePKCODE_STATECONFLICT;	//ï¿ ï¿¥Uï¿ ï¿¢Â¡IÂ¡ioAAAIï¿ OÂ¡Ã—ï¿ ï¿¥A Â¨uEï¿¥iEï¿ ï¿¥U.
-
+		return ePKCODE_STATECONFLICT;	//¡Ë¡ÍU¡Ë¡ş¢®I¢®ioAAAI¡ËO¢®¡¿¡Ë¡ÍA ¡§uE¡ÍiE¡Ë¡ÍU.
+	
 	m_HeroCharacterInfo.bPKMode = TRUE;
 	m_dwPKModeStartTime			= gCurTime;
 
 //---KES PK 071124
-	m_dwPKContinueTime			= 20*60*1000 + ( GetBadFame() / 75 ) * 5*60*1000;	//ê¸°ë³¸ 30ë¶„ + ì•…ëª…ì¹˜ 75ë§ˆë‹¤ 5ë¶„
+	m_dwPKContinueTime			= 20*60*1000 + ( GetBadFame() / 75 ) * 5*60*1000;	//±âº» 30ºĞ + ¾Ç¸íÄ¡ 75¸¶´Ù 5ºĞ
 //----------------
 
 	return ePKCODE_OK;
@@ -2978,6 +3310,9 @@ int CPlayer::PKModeOn()
 
 BOOL CPlayer::PKModeOff()
 {
+	if (g_pServerSystem->GetMapNum() == PVP)
+		return FALSE;
+
 	if( !IsPKMode() ) return FALSE;
 
 	if( gCurTime - m_dwPKModeStartTime >= m_dwPKContinueTime || ( GetUserLevel() <= eUSERLEVEL_GM && PKMGR->IsPKEvent() ) )
@@ -2998,7 +3333,7 @@ void CPlayer::PKModeOffForce()
 
 void CPlayer::StateProcess()
 {
-	switch( GetState() )
+	switch( GetState() )		
 	{
 	case eObjectState_None:
 		{
@@ -3050,7 +3385,7 @@ void CPlayer::StateProcess()
 				{
 					m_HeroInfo.LastPKModeEndTime = 0;
 				}
-
+				
 				UpdateCharacterInfoByTime(
 					GetID(),
 					GetPlayerExpPoint(),
@@ -3068,6 +3403,14 @@ void CPlayer::StateProcess()
 					GetFishingLevel(),
 					GetFishingExp(),
 					GetFishPoint());
+				//aziz MallShop in Game Method 1
+				VipData_Update(GetID(), GetVipPoint());
+				//aziz Reborn 24 Sep
+				RebornData_Update(GetID(), GetRebornData());
+				//aziz Kill Shop 30 Sep
+				KillData_Update(GetID(), GetKillPoint(), 3);
+				//aziz Reborn Point 13 Oct
+				RebornPoint_Update(GetID(), GetRebornPoint());
 
 				m_dwProgressTime = gCurTime;
 			}
@@ -3083,9 +3426,9 @@ void CPlayer::StateProcess()
 		break;
 	case eObjectState_Die:
 		{
-			//---KES PK 071202	ì£½ì€ ê²½ìš° ì‹œê°„ì„ ê³„ì† ë¦¬ì…‹ (ì‹œê°„ì´ ì•ˆê°€ë„ë¡)
+			//---KES PK 071202	Á×Àº °æ¿ì ½Ã°£À» °è¼Ó ¸®¼Â (½Ã°£ÀÌ ¾È°¡µµ·Ï)
 			SetPKStartTimeReset();
-
+			
 			if(FALSE == m_bNeedRevive )
 			{
 				break;
@@ -3108,13 +3451,13 @@ void CPlayer::StateProcess()
 
 			DWORD dwElapsed = gCurTime - m_ObjectState.State_Start_Time;
 
-			if( dwElapsed > PLAYERREVIVE_TIME )
+			if( dwElapsed > PLAYERREVIVE_TIME && g_pServerSystem->GetMapNum() != StreetTournament)
 			{
 				if(TRUE == m_bDieForGFW)
 				{
 					MSGBASE message;
 					message.Category	= MP_USERCONN;
-					message.Protocol	= MP_USERCONN_READY_TO_REVIVE_BY_GFW;
+					message.Protocol	= MP_USERCONN_READY_TO_REVIVE_BY_GFW;					
 					SendMsg( &message, sizeof( message ) );
 
 					m_bNeedRevive = FALSE;
@@ -3126,16 +3469,28 @@ void CPlayer::StateProcess()
 					break;
 				if( IsReadyToRevive() != TRUE )
 					break;
-
+				
 				MSGBASE msg;
 				msg.Category = MP_USERCONN;
 				msg.Protocol = MP_USERCONN_READY_TO_REVIVE;
 				SendMsg( &msg, sizeof(msg) );
 
 				m_bNeedRevive = FALSE;
+			} else if (dwElapsed > PLAYERREVIVE_TIME && g_pServerSystem->GetMapNum() == StreetTournament && m_bDieForGFW == TRUE)
+			{
+				STREETTOURNAMENTMGR->MoveToAlker(this, FALSE);
 			}
 		}
 		break;
+	}
+	
+	if(m_lastspinslot != 0)
+	{
+		if(gCurTime > m_lastspinslot)
+		{
+			m_lastspinslot = 0;
+			SendSlotHasil();
+		}
 	}
 
 	AddBadFameReduceTime();
@@ -3148,8 +3503,8 @@ void CPlayer::StateProcess()
 }
 
 void CPlayer::SetWearedItemIdx(DWORD WearedPosition,DWORD ItemIdx)
-{
-	const size = sizeof( m_HeroCharacterInfo.WearedItemIdx ) / sizeof( DWORD );
+{	
+	const DWORD size = sizeof( m_HeroCharacterInfo.WearedItemIdx ) / sizeof( DWORD );
 
 	if( size > WearedPosition )
 	{
@@ -3158,7 +3513,7 @@ void CPlayer::SetWearedItemIdx(DWORD WearedPosition,DWORD ItemIdx)
 	else
 	{
 		ASSERT( 0 );
-	}
+	}	
 }
 
 void CPlayer::QuestProcess()
@@ -3166,16 +3521,18 @@ void CPlayer::QuestProcess()
 	m_QuestGroup.Process();
 }
 
+
 void CPlayer::SetPKModeEndtime()
 {
 	m_HeroInfo.LastPKModeEndTime = 0;
 }
 
+
 void CPlayer::AddBadFameReduceTime()
 {
 	if( g_pServerSystem->GetMap()->IsVillage() )	return;
 	if( GetState() == eObjectState_Immortal )		return;
-	if( IsPKMode() )								return;
+	if( IsPKMode() && g_pServerSystem->GetMapNum() != PVP)								return;
 
 	m_HeroInfo.LastPKModeEndTime += gTickTime;
 
@@ -3199,11 +3556,13 @@ void CPlayer::AddBadFameReduceTime()
 	}
 }
 
+
+
 void CPlayer::SpeedHackCheck()
 {
 	++m_nHackCount;
 
-	if( gCurTime - m_dwHackStartTime >= 60*1000 )	//1ë¶„
+	if( gCurTime - m_dwHackStartTime >= 60*1000 )	//1ºĞ
 	{
 		if( m_nHackCount >= g_nHackCheckWriteNum )
 		{
@@ -3229,13 +3588,10 @@ void CPlayer::ClearMurderIdx()
 	m_bPenaltyByDie = FALSE;
 }
 
+
 DWORD CPlayer::Damage(CObject* pAttacker,RESULTINFO* pDamageInfo)
 {
 	DWORD life = GetLife();
-
-// --- skr 12/01/2020
-  //if( IsRelifeON() ){ return life; }
-
 	DWORD beforelife = life;
 
 	if(life > pDamageInfo->RealDamage)
@@ -3246,16 +3602,16 @@ DWORD CPlayer::Damage(CObject* pAttacker,RESULTINFO* pDamageInfo)
 	{
 		if( GetUserLevel() == eUSERLEVEL_GM || m_God ) // && g_pServerSystem->GetNation() == eNATION_KOREA )
 		{
-			life = 1;		//gmì€ ë°ë¯¸ì§€ëŠ” ë°›ì•„ë„ ì£½ì§€ ì•Šë„ë¡
+			life = 1;		//gmÀº µ¥¹ÌÁö´Â ¹Ş¾Æµµ Á×Áö ¾Êµµ·Ï
 		}
 		else
 		{
 			life = 0;
 		}
 	}
-
+	
 	SetLife(life,FALSE);
-
+ 
 	DoDamage(pAttacker,pDamageInfo,beforelife);
 
 	return life;
@@ -3265,11 +3621,12 @@ DWORD CPlayer::ManaDamage( CObject* pAttacker, RESULTINFO* pDamageInfo )
 {
 	DWORD mana = GetMana();
 	DWORD beforemana = mana;
+	pDamageInfo->ManaDamage = (pDamageInfo->ManaDamage / 2) * 3;
 	mana = (mana > pDamageInfo->ManaDamage ? mana - pDamageInfo->ManaDamage : 0);
-
+	
 	SetMana( mana, FALSE );
-
-	// ë§ˆë‚˜ ë°ë¯¸ì§€ë§Œ ìˆëŠ” ê²½ìš°
+ 
+	// ¸¶³ª µ¥¹ÌÁö¸¸ ÀÖ´Â °æ¿ì
 	if( pDamageInfo->RealDamage == 0 )
 		DoManaDamage( pAttacker, pDamageInfo, beforemana );
 
@@ -3299,7 +3656,7 @@ void CPlayer::SetGuildMarkName(MARKNAMETYPE MarkName)
 }
 
 char* CPlayer::GetGuildCanEntryDate()
-{
+{ 
 	return m_HeroInfo.MunpaCanEntryDate;
 }
 
@@ -3330,6 +3687,429 @@ void CPlayer::UpdateLogoutToDB(BOOL val)
 	}
 }
 
+void CPlayer::SetPVPScoreLogin(DWORD pvpscore)
+{
+	m_pvpscore = pvpscore;
+	
+	if(m_pvpscore != 0)
+	{
+		MSG_DWORD msg ;
+		msg.Category	= MP_USERCONN ;
+		msg.Protocol	= MP_PVP_CEK_LOGIN ;
+		msg.dwObjectID	= GetID();
+		msg.dwData		= pvpscore;
+		SendMsg( &msg, sizeof(msg) );
+	}
+	
+	if(STREETTOURNAMENTMGR->GetState() != 0)
+	{
+		MSG_WORD3 msg2 ;
+		ZeroMemory(&msg2, sizeof(msg2));
+		msg2.Category	= MP_USERCONN ;
+		msg2.Protocol	= MP_USERCONN_STREETTOURNAMENT_STATE;
+		msg2.wData1		= 0 ;
+		msg2.wData2		= STREETTOURNAMENTMGR->GetState();
+		msg2.wData3		= STREETTOURNAMENTMGR->GetStage();
+		SendMsg( &msg2, sizeof(msg2) );
+	}
+	
+}
+
+DWORD CPlayer::GetPVPScore()
+{
+	return m_pvpscore;
+}
+
+void CPlayer::UpdatePVPScore(DWORD pvpscore)
+{
+	m_pvpscore = pvpscore;
+}
+void CPlayer::DoSpinSlot(DWORD SpinBet, DWORD SpinTime)
+{
+	if(g_pServerSystem->GetMapNum() == GTMAPNUM || g_pServerSystem->GetMapNum() == PVP)
+		return;
+
+	if(m_lastspinslot != 0 || m_pSpinslothasil1 != 0 || m_pSpinslothasil2 != 0 || m_pSpinslothasil3 != 0 || m_pSpinslothasil4 != 0)
+		return;
+	
+	if(m_MaxCountSpin > 50) 
+	{
+		m_VerifyCaptcha = random(1000, 9999);
+		//m_VerifyCount += 1;
+
+		MSG_DWORD2 msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_USERCONN_CAPTCHA_SYN;
+		msg.dwObjectID = GetID();
+		msg.dwData1 = m_VerifyCaptcha;
+		msg.dwData2 = 1;
+		SendMsg( &msg, sizeof(msg) );
+
+		return;
+	}
+
+	m_MaxCountSpin += 1;
+
+	WORD cheatspincheck = 0;
+	if (SpinBet == 200000)
+	{
+		cheatspincheck += 1;
+	} else if (SpinBet == 400000)
+	{
+		cheatspincheck += 1;
+	} else if (SpinBet == 600000)
+	{
+		cheatspincheck += 1;
+	} else if (SpinBet == 1000000)
+	{
+		cheatspincheck += 1;
+	} else {
+		cheatspincheck = 0;
+	}
+
+	if (cheatspincheck == 0 )
+	{
+		MSG_WORD msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_SLOT_NACK;
+		msg.dwObjectID = GetID();
+		msg.wData = 0;
+		SendMsg( &msg, sizeof(msg) );
+		return;
+	}
+		
+	if ((GetMoney() - SpinBet) < 10000000 )
+	{
+		MSG_WORD msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_SLOT_NACK;
+		msg.dwObjectID = GetID();
+		msg.wData = 1;
+		SendMsg( &msg, sizeof(msg) );
+		return;
+	}
+
+	if ((GetMoney()+4000000000) > MAX_INVENTORY_MONEY )
+	{
+		MSG_WORD msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_SLOT_NACK;
+		msg.dwObjectID = GetID();
+		msg.wData = 2;
+		SendMsg( &msg, sizeof(msg) );
+		return;
+	}
+
+	SetMoney(SpinBet, MONEY_SUBTRACTION ) ;
+
+	if (SpinBet > 0)
+	{
+		MSG_DWORDEX2 msg2;
+		msg2.Category	= MP_USERCONN;
+		msg2.Protocol	= MP_ITEM_ADDMONEY_ICE;
+		msg2.dwObjectID = GetID();
+		msg2.dweData1	= 4;
+		msg2.dweData2	= SpinBet;
+		SendMsg( &msg2, sizeof(msg2) );
+	}
+
+	m_pLastSpinSlot = gCurTime;
+
+	DWORD random_hasil71 = random(5, 7);
+	DWORD random_hasil72 = random(4, 7);
+	DWORD random_hasil73 = random(6, 7);
+	DWORD random_hasil74 = random(4, 7);
+	DWORD m_pSpinslot1	= random(1, random_hasil71);
+	DWORD m_pSpinslot2	= random(1, random_hasil72);
+	DWORD m_pSpinslot3	= random(1, random_hasil73);
+	DWORD m_pSpinslot4	= random(1, random_hasil74);
+	MONEYTYPE SlotGetmoney = 0;
+	MONEYTYPE jackpotbefore = g_pServerSystem->GetTotjackpot();
+	WORD m_wincode	= 0;
+	//for starter
+	using namespace std;
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<unsigned long long> dis(1, 1999999999);
+	if(jackpotbefore <= 0)
+	{
+randomize:
+		unsigned long long randomX = dis(gen);
+		if(randomX < 9999999)
+			goto randomize;
+
+		jackpotbefore = randomX;
+	}
+
+	SYSTEMTIME sysTime;
+	GetLocalTime( &sysTime );
+
+	if (m_pSpinslot1 == 7 && m_pSpinslot2 == 7 && m_pSpinslot3 == 7 && m_pSpinslot4 == 7)
+	{
+		//80% jackpot + 5x
+		m_wincode = 1;
+		SlotGetmoney = MONEYTYPE(jackpotbefore * 80) / 100;
+		SlotGetmoney += SpinBet * 5;
+		SlotGetmoney += SpinBet;
+
+		//MONEYTYPE	getmoneynya = MONEYTYPE(jackpotbefore * 80) / 100;
+		//MONEYTYPE	totjackpot = jackpotbefore - SlotGetmoney;
+		//DailyJackpotUpdate(g_pServerSystem->GetMapNum(), totjackpot );
+		//g_pServerSystem->SetMapTotaljackpot(totjackpot);
+		g_pServerSystem->MinusMapjackpot(SlotGetmoney);
+
+		m_additemachievment = 1;
+
+	} else if (((m_pSpinslot1 == 7 && m_pSpinslot2 == 7 && m_pSpinslot3 == 7 && m_pSpinslot4 != 7) ||
+		(m_pSpinslot1 != 7 && m_pSpinslot2 == 7 && m_pSpinslot3 == 7 && m_pSpinslot4 == 7) ||
+		(m_pSpinslot1 == 7 && m_pSpinslot2 != 7 && m_pSpinslot3 == 7 && m_pSpinslot4 == 7) ||
+		(m_pSpinslot1 == 7 && m_pSpinslot2 == 7 && m_pSpinslot3 != 7 && m_pSpinslot4 == 7)) && m_wincode == 0)
+	{
+		//50% jackpot + 5x
+		m_wincode = 2;
+		SlotGetmoney = MONEYTYPE(jackpotbefore * 50) / 100;
+		SlotGetmoney += SpinBet * 5;
+		SlotGetmoney += SpinBet;
+
+		//MONEYTYPE	totjackpot = jackpotbefore - SlotGetmoney;
+		//DailyJackpotUpdate(g_pServerSystem->GetMapNum(), totjackpot );
+		//g_pServerSystem->SetMapTotaljackpot(totjackpot);
+		g_pServerSystem->MinusMapjackpot(SlotGetmoney);
+		
+		m_additemachievment = 1;
+		
+	} else if (((m_pSpinslot1 == 7 && m_pSpinslot2 == 7 && m_pSpinslot3 != 7 && m_pSpinslot4 != 7) ||
+		(m_pSpinslot1 != 7 && m_pSpinslot2 != 7 && m_pSpinslot3 == 7 && m_pSpinslot4 == 7) ||
+		(m_pSpinslot1 == 7 && m_pSpinslot2 != 7 && m_pSpinslot3 != 7 && m_pSpinslot4 == 7) ||
+		(m_pSpinslot1 != 7 && m_pSpinslot2 == 7 && m_pSpinslot3 == 7 && m_pSpinslot4 != 7) ||
+		(m_pSpinslot1 != 7 && m_pSpinslot2 == 7 && m_pSpinslot3 != 7 && m_pSpinslot4 == 7) ||
+		(m_pSpinslot1 == 7 && m_pSpinslot2 != 7 && m_pSpinslot3 == 7 && m_pSpinslot4 != 7)) && m_wincode == 0)
+	{
+		//10% money	+ 5x
+		m_wincode = 3;
+		SlotGetmoney = MONEYTYPE(jackpotbefore * 10) / 100;
+		SlotGetmoney += SpinBet * 5;
+		SlotGetmoney += SpinBet;
+
+		//MONEYTYPE	totjackpot = jackpotbefore - SlotGetmoney;
+		//DailyJackpotUpdate(g_pServerSystem->GetMapNum(), totjackpot );
+		//g_pServerSystem->SetMapTotaljackpot(totjackpot);
+		g_pServerSystem->MinusMapjackpot(SlotGetmoney);
+
+		
+	} else if ((m_pSpinslot1 == m_pSpinslot2 && m_pSpinslot2 == m_pSpinslot3 && m_pSpinslot3 == m_pSpinslot4) && m_wincode == 0)
+	{
+		//get 5x bet
+		m_wincode = 4;
+		SlotGetmoney = SpinBet * 5;
+		SlotGetmoney += SpinBet;
+		if(m_pSpinslot1 == 5)
+		{
+			m_additemachievment = 2;
+		} else if(m_pSpinslot1 == 3)
+		{
+			m_additemachievment = 3;
+		} else if(m_pSpinslot1 == 2)
+		{
+			m_additemachievment = 4;
+		} else if(m_pSpinslot1 == 1)
+		{
+			m_additemachievment = 5;
+		}
+
+	} else if (((m_pSpinslot1 == m_pSpinslot2 && m_pSpinslot2 == m_pSpinslot3 && m_pSpinslot3 != m_pSpinslot4) ||
+		(m_pSpinslot1 != m_pSpinslot2 && m_pSpinslot2 == m_pSpinslot3 && m_pSpinslot3 == m_pSpinslot4) ||
+		(m_pSpinslot1 == m_pSpinslot2 && m_pSpinslot2 != m_pSpinslot3 && m_pSpinslot3 == m_pSpinslot4)) && m_wincode == 0)
+	{
+		//get 3x bet
+		m_wincode = 5;
+		SlotGetmoney = SpinBet * 3;
+		SlotGetmoney += SpinBet; //+money back
+		if((m_pSpinslot1 == 5 && m_pSpinslot2 == 5) || (m_pSpinslot2 == 5 && m_pSpinslot3 == 5))
+		{
+			m_additemachievment = 2;
+		} else if((m_pSpinslot1 == 3 && m_pSpinslot2 == 3) || (m_pSpinslot2 == 3 && m_pSpinslot3 == 3))
+		{
+			m_additemachievment = 3;
+		} else if((m_pSpinslot1 == 2 && m_pSpinslot2 == 2) || (m_pSpinslot2 == 2 && m_pSpinslot3 == 2))
+		{
+			m_additemachievment = 4;
+		} else if((m_pSpinslot1 == 1 && m_pSpinslot2 == 1) || (m_pSpinslot2 == 1 && m_pSpinslot3 == 1))
+		{
+			m_additemachievment = 5;
+		}
+	} else if (((m_pSpinslot1 == m_pSpinslot2 && m_pSpinslot2 != m_pSpinslot3 && m_pSpinslot3 != m_pSpinslot4)||
+		(m_pSpinslot1 != m_pSpinslot2 && m_pSpinslot2 != m_pSpinslot3 && m_pSpinslot3 == m_pSpinslot4)||
+		(m_pSpinslot1 != m_pSpinslot2 && m_pSpinslot2 == m_pSpinslot3 && m_pSpinslot3 != m_pSpinslot4)) && m_wincode == 0)
+	{
+		//get back money
+		m_wincode = 6;
+		//SlotGetmoney = SpinBet;
+		SlotGetmoney = SpinBet * 2;
+	} else {
+		//null hahahah
+		//m_wincode = 0;
+		SlotGetmoney = 0;
+		DWORD forjackpot = DWORD((SpinBet*3) / 4);
+		//MONEYTYPE	totjackpot = jackpotbefore + forjackpot;
+		//DailyJackpotUpdate(g_pServerSystem->GetMapNum(), totjackpot );
+		//g_pServerSystem->SetMapTotaljackpot(totjackpot);
+		g_pServerSystem->PlusMapjackpot(forjackpot);
+	}
+
+	if (SlotGetmoney > 0)
+	{
+		SetMoney(SlotGetmoney, MONEY_ADDITION ) ;
+	}
+
+	m_lastspinslot = gCurTime + 8000;
+	m_pSpinslothasil1 = WORD(m_pSpinslot1);
+	m_pSpinslothasil2 = WORD(m_pSpinslot2);
+	m_pSpinslothasil3 = WORD(m_pSpinslot3);
+	m_pSpinslothasil4 = WORD(m_pSpinslot4);
+	m_wincodehasil = m_wincode;
+	SlotGetmoneyhasil = SlotGetmoney;
+
+	/*
+	MSG_SLOT_SYN_ACK msg3;
+	msg3.Category	= MP_USERCONN;
+	msg3.Protocol	= MP_SLOT_ACK;
+	msg3.dwObjectID = GetID();
+	msg3.dweData1	= SlotGetmoney;
+	msg3.dweData2	= WORD(m_pSpinslot1);
+	msg3.dweData3	= WORD(m_pSpinslot2);
+	msg3.dweData4	= WORD(m_pSpinslot3);
+	msg3.dweData5	= WORD(m_pSpinslot4);
+	msg3.dweData6	= g_pServerSystem->GetTotjackpot();
+	msg3.dweData7	= m_wincode;
+	
+	SendMsg( &msg3, sizeof(msg3) );
+	*/
+	TCHAR szFile[_MAX_PATH] = {0, } ;
+	sprintf( szFile, "Log/SLOT%d_%02d%02d.log", g_pServerSystem->GetMapNum(), sysTime.wMonth, sysTime.wDay ) ;
+	FILE *fp = fopen(szFile, "a+") ;
+	if (fp)
+	{
+		fprintf(fp, "[%02d:%02d][%s]:[%d] -> [%f] data: [%d][%d][%d][%d]\n", sysTime.wHour, sysTime.wMinute, GetObjectName(), SpinBet, (float)SlotGetmoney, m_pSpinslot1, m_pSpinslot2, m_pSpinslot3, m_pSpinslot4 ) ;
+		fclose(fp) ;
+	}
+	
+}
+
+void CPlayer::SendSlotHasil()
+{
+	SYSTEMTIME sysTime;
+	GetLocalTime( &sysTime );
+
+	char fnamex[256];
+	sprintf(fnamex,"./webstream/event_month%02ddate%02d.txt", sysTime.wMonth, sysTime.wDay);
+
+	MSG_SLOT_SYN_ACK msg3;
+	msg3.Category	= MP_USERCONN;
+	msg3.Protocol	= MP_SLOT_ACK;
+	msg3.dwObjectID = GetID();
+	msg3.dweData1	= SlotGetmoneyhasil;
+	msg3.dweData2	= WORD(m_pSpinslothasil1);
+	msg3.dweData3	= WORD(m_pSpinslothasil2);
+	msg3.dweData4	= WORD(m_pSpinslothasil3);
+	msg3.dweData5	= WORD(m_pSpinslothasil4);
+	msg3.dweData6	= g_pServerSystem->GetTotjackpot();
+	msg3.dweData7	= m_wincodehasil;
+	
+	SendMsg( &msg3, sizeof(msg3) );
+
+	if(m_wincodehasil < 4)
+	{
+		char bufmsg[MAX_PATH] = {0,};
+		if(m_wincodehasil == 1)
+		{
+			_stprintf(bufmsg, "[Slot Machine] Grats! %s win jackpot 7777 get %I64u gold!", GetObjectName(), SlotGetmoneyhasil);
+			MSG_CHAT_WORD msg;
+			msg.Category	= MP_CHEAT;
+			msg.Protocol	= MP_CHEAT_NOTICE_SYN_BOSS;
+			msg.dwObjectID	= 255671;
+			msg.wData = 0;
+			SafeStrCpy( msg.Msg, bufmsg, sizeof(msg.Msg));
+			g_Network.Broadcast2AgentServer((char*)&msg, sizeof(msg));
+
+			FILE* fpLogx = fopen( fnamex, "a+" );
+			if( fpLogx )
+			{
+				fprintf( fpLogx, "<font color='green'>[%02d:%02d][ITEM]: Congratulations! <b>%s</b> has win Jackpot 7777<b>%f</b></font>\n", sysTime.wHour, sysTime.wMinute, GetObjectName(), (float)SlotGetmoneyhasil );
+				fclose( fpLogx );
+			}
+
+		} else if(m_wincodehasil == 2)
+		{
+			_stprintf(bufmsg, "[Slot Machine] Grats! %s win jackpot 777 get %I64u gold!", GetObjectName(), SlotGetmoneyhasil);
+			MSG_CHAT_WORD msg;
+			msg.Category	= MP_CHEAT;
+			msg.Protocol	= MP_CHEAT_NOTICE_SYN_BOSS;
+			msg.dwObjectID	= 255671;
+			msg.wData = 0;
+			SafeStrCpy( msg.Msg, bufmsg, sizeof(msg.Msg));
+			g_Network.Broadcast2AgentServer((char*)&msg, sizeof(msg));
+
+			FILE* fpLogx = fopen( fnamex, "a+" );
+			if( fpLogx )
+			{
+				fprintf( fpLogx, "<font color='green'>[%02d:%02d][ITEM]: Congratulations! <b>%s</b> has win Jackpot 777<b>%f</b></font>\n", sysTime.wHour, sysTime.wMinute, GetObjectName(), (float)SlotGetmoneyhasil );
+				fclose( fpLogx );
+			}
+
+			
+		} else if(m_wincodehasil == 3)
+		{
+			_stprintf(bufmsg, "[Slot Machine] Grats! %s win jackpot 77 get %I64u gold!", GetObjectName(), SlotGetmoneyhasil);
+			MSG_CHAT_WORD msg;
+			msg.Category	= MP_CHEAT;
+			msg.Protocol	= MP_CHEAT_NOTICE_SYN_BOSS;
+			msg.dwObjectID	= 255671;
+			msg.wData = 0;
+			SafeStrCpy( msg.Msg, bufmsg, sizeof(msg.Msg));
+			g_Network.Broadcast2AgentServer((char*)&msg, sizeof(msg));
+
+			FILE* fpLogx = fopen( fnamex, "a+" );
+			if( fpLogx )
+			{
+				fprintf( fpLogx, "<font color='green'>[%02d:%02d][ITEM]: Congratulations! <b>%s</b> has win Jackpot 77<b>%f</b></font>\n", sysTime.wHour, sysTime.wMinute, GetObjectName(), (float)SlotGetmoneyhasil );
+				fclose( fpLogx );
+			}
+
+		}
+		
+	}
+	if(m_additemachievment == 1)
+	{
+		ITEMMGR->ObtainGeneralItem(this, 30000532, 1, eLog_ItemObtainMonster, MP_ITEM_MONSTER_OBTAIN_NOTIFY);// blue diamond
+
+	} else if(m_additemachievment == 2)
+	{
+		ITEMMGR->ObtainGeneralItem(this, 30000532, 1, eLog_ItemObtainMonster, MP_ITEM_MONSTER_OBTAIN_NOTIFY);
+
+	} else if(m_additemachievment == 3)
+	{
+		ITEMMGR->ObtainGeneralItem(this, 30000532, 1, eLog_ItemObtainMonster, MP_ITEM_MONSTER_OBTAIN_NOTIFY);
+
+	} else if(m_additemachievment == 4)
+	{
+		ITEMMGR->ObtainGeneralItem(this, 30000532, 1, eLog_ItemObtainMonster, MP_ITEM_MONSTER_OBTAIN_NOTIFY);
+
+	} else if(m_additemachievment == 5)
+	{
+		ITEMMGR->ObtainGeneralItem(this, 30000532, 1, eLog_ItemObtainMonster, MP_ITEM_MONSTER_OBTAIN_NOTIFY);
+
+	}
+	
+	m_additemachievment = 0;
+    m_pSpinslothasil1 = 0;
+	m_pSpinslothasil2 = 0;
+	m_pSpinslothasil3 = 0;
+	m_pSpinslothasil4 = 0;
+	m_wincodehasil = 0;
+	SlotGetmoneyhasil = 0;
+}
+
 void CPlayer::CheckImmortalTime()
 {
 	if(g_pServerSystem->GetMapNum() != GTMAPNUM)
@@ -3347,7 +4127,7 @@ void CPlayer::CheckImmortalTime()
 		msg.dwObjectID = GetID();
 		msg.dwData1 = GetID();
 		msg.dwData2 = 0;
-
+		
 		PACKEDDATA_OBJ->QuickSend(this,&msg,sizeof(msg));
 	}
 }
@@ -3357,34 +4137,40 @@ void CPlayer::SetNickName(char* NickName)
 	SafeStrCpy(m_HeroCharacterInfo.NickName,NickName, MAX_GUILD_NICKNAME+1);
 }
 
+void CPlayer::SetMarryPlayerName(char* MarryPlayerName)
+{
+	SafeStrCpy(m_HeroCharacterInfo.MarryName,MarryPlayerName, 32+1);
+}
+
+
 void CPlayer::SetFamilyNickName(char* NickName)
 {
 	SafeStrCpy(m_HeroCharacterInfo.FamilyNickName,NickName, sizeof( m_HeroCharacterInfo.FamilyNickName ) );
 }
 
 LEVELTYPE CPlayer::GetLevel()
-{
-	return m_HeroCharacterInfo.Level;
+{ 
+	return m_HeroCharacterInfo.Level; 
 }
 
-DWORD CPlayer::GetLife()
-{
-	return m_HeroCharacterInfo.Life;
+DWORD CPlayer::GetLife() 
+{ 
+	return m_HeroCharacterInfo.Life; 
 }
 
 DWORD CPlayer::GetMana()
-{
-	return m_HeroInfo.Mana;
+{ 
+	return m_HeroInfo.Mana; 
 }
 
 DWORD CPlayer::DoGetMaxLife()
-{
-	return m_HeroCharacterInfo.MaxLife;
+{ 
+	return m_HeroCharacterInfo.MaxLife; 
 }
 
 DWORD CPlayer::DoGetMaxMana()
-{
-	return m_HeroInfo.MaxMana;
+{ 
+	return m_HeroInfo.MaxMana; 
 }
 
 void CPlayer::SetStage( BYTE grade, BYTE index )
@@ -3398,7 +4184,7 @@ void CPlayer::SetStage( BYTE grade, BYTE index )
 	msg.bData2		= index ;
 	PACKEDDATA_OBJ->QuickSend( this, &msg, sizeof(msg) );
 
-	CharacterTotalInfoUpdate( this );
+	CharacterTotalInfoUpdate( this );	
 }
 
 WORD CPlayer::GetJobCodeForGT ()
@@ -3441,15 +4227,17 @@ void CPlayer::SetJob( BYTE jobGrade, BYTE jobIdx )
 						m_HeroCharacterInfo.Job[4],
 						m_HeroCharacterInfo.Job[5] );
 
-	// 071112 ì›…ì£¼, í´ë˜ìŠ¤ ë¡œê·¸ë¥¼ ë‚¨ê¸´ë‹¤
+
+	// 071112 ¿õÁÖ, Å¬·¡½º ·Î±×¸¦ ³²±ä´Ù
 	InsertLogJob( this, m_HeroCharacterInfo.Job[0], jobGrade, jobIdx );
 
-	// 081022 KTH --
+	// 081022 KTH -- 
 	CHARCALCMGR->AddPlayerJobSkill(this);
 
 	WebEvent( GetUserID(), 2 );
 
-	// 100113 ONS ì£¼ë¯¼ë“±ë¡ì •ë³´ì¤‘ í´ë˜ìŠ¤ì •ë³´ê°€ ë³€ê²½ë˜ì—ˆì„ ê²½ìš° ì—ì´ì „íŠ¸ë¡œ ì „ë‹¬í•œë‹¤.
+
+	// 100113 ONS ÁÖ¹Îµî·ÏÁ¤º¸Áß Å¬·¡½ºÁ¤º¸°¡ º¯°æµÇ¾úÀ» °æ¿ì ¿¡ÀÌÀüÆ®·Î Àü´ŞÇÑ´Ù.
 	CHARACTER_TOTALINFO TotalInfo;
 	ZeroMemory(&TotalInfo, sizeof(TotalInfo));
 	GetCharacterTotalInfo(&TotalInfo);
@@ -3469,7 +4257,7 @@ void CPlayer::SetJob( BYTE jobGrade, BYTE jobIdx )
 	Packet.dwData = dwClass;
 	g_Network.Broadcast2AgentServer( ( char* )&Packet, sizeof( Packet ) );
 
-	// 080225 LUJ, ê¸¸ë“œ íšŒì›ì¼ ê²½ìš° ì§ì—… ì •ë³´ ë³€ê²½ì„ ì „ ì„œë²„ì— ì „íŒŒí•´ì•¼í•œë‹¤
+	// 080225 LUJ, ±æµå È¸¿øÀÏ °æ¿ì Á÷¾÷ Á¤º¸ º¯°æÀ» Àü ¼­¹ö¿¡ ÀüÆÄÇØ¾ßÇÑ´Ù
 	{
 		CGuild* guild = GUILDMGR->GetGuild( GetGuildIdx() );
 
@@ -3498,24 +4286,24 @@ void CPlayer::SetJob( BYTE jobGrade, BYTE jobIdx )
 		g_Network.Send2AgentServer( ( char* )&message, sizeof( message ) );
 
 		GUILDMGR->NetworkMsgParse( message.Protocol, &message );
-	}
+	}	
 }
 
 void CPlayer::SendPlayerToMap(MAPTYPE mapNum, float xpos, float zpos)
 {
-	MSG_DWORD3 msg ;														// ë©”ì‹œì§€ êµ¬ì¡°ì²´ë¥¼ ì„ ì–¸í•œë‹¤.
-	memset(&msg, 0, sizeof(MSG_DWORD3)) ;									// ë©”ì‹œì§€ ì´ˆê¸°í™”.
+	MSG_DWORD3 msg ;														// ¸Ş½ÃÁö ±¸Á¶Ã¼¸¦ ¼±¾ğÇÑ´Ù.
+	memset(&msg, 0, sizeof(MSG_DWORD3)) ;									// ¸Ş½ÃÁö ÃÊ±âÈ­.
 
 	msg.Category	= MP_USERCONN ;
-	msg.Protocol	= MP_USERCONN_QUEST_CHANGEMAP_SYN ;						// ì¹´í…Œê³ ë¦¬ì™€ í”„ë¡œí† ì½œì„ ì„¸íŒ…í•œë‹¤.
+	msg.Protocol	= MP_USERCONN_QUEST_CHANGEMAP_SYN ;						// Ä«Å×°í¸®¿Í ÇÁ·ÎÅäÄİÀ» ¼¼ÆÃÇÑ´Ù.
 
-	msg.dwObjectID	= GetID() ;												// ì˜¤ë¸Œì íŠ¸ ì•„ì´ë””ë¥¼ ì„¸íŒ…í•œë‹¤.
+	msg.dwObjectID	= GetID() ;												// ¿ÀºêÁ§Æ® ¾ÆÀÌµğ¸¦ ¼¼ÆÃÇÑ´Ù.
 
-	msg.dwData1		= (DWORD)mapNum ;										// ë„ì°© ì§€ì—­ì˜ ë§µ ë²ˆí˜¸ë¥¼ ì„¸íŒ…í•œë‹¤.
-	msg.dwData2		= (DWORD)xpos ;											// Xì¢Œí‘œë¥¼ ì„¸íŒ…í•œë‹¤.
-	msg.dwData3		= (DWORD)zpos ;											// Zì¢Œí‘œë¥¼ ì„¸íŒ…í•œë‹¤.
+	msg.dwData1		= (DWORD)mapNum ;										// µµÂø Áö¿ªÀÇ ¸Ê ¹øÈ£¸¦ ¼¼ÆÃÇÑ´Ù.
+	msg.dwData2		= (DWORD)xpos ;											// XÁÂÇ¥¸¦ ¼¼ÆÃÇÑ´Ù.
+	msg.dwData3		= (DWORD)zpos ;											// ZÁÂÇ¥¸¦ ¼¼ÆÃÇÑ´Ù.
 
-	SendMsg( &msg, sizeof(MSG_DWORD3) ) ;									// ë©”ì‹œì§€ë¥¼ ì „ì†¡í•œë‹¤.
+	SendMsg( &msg, sizeof(MSG_DWORD3) ) ;									// ¸Ş½ÃÁö¸¦ Àü¼ÛÇÑ´Ù.
 }
 
 DOUBLE CPlayer::GetPlayerTotalExpPoint()
@@ -3566,7 +4354,7 @@ float CPlayer::GetAvoid()
 	return mAvoid;
 }
 
-// 100221 ShinJS --- ë¸”ëŸ­ê³µì‹ ìˆ˜ì •
+// 100221 ShinJS --- ºí·°°ø½Ä ¼öÁ¤
 float CPlayer::GetBlock()
 {
 	const float rate	= mRateBuffStatus.Block + mRatePassiveStatus.Block;
@@ -3574,33 +4362,33 @@ float CPlayer::GetBlock()
 
 	switch( GetJop( 0 ) )
 	{
-		// 080910 LUJ, íŒŒì´í„°
+		// 080910 LUJ, ÆÄÀÌÅÍ
 	case 1:
 		{
 			bonus = 15.f;
 			break;
 		}
-		// 080910 LUJ, ë¡œê·¸
+		// 080910 LUJ, ·Î±×
 	case 2:
 		{
 			bonus = 10.f;
 			break;
 		}
-		// 080910 LUJ, ë©”ì´ì§€
+		// 080910 LUJ, ¸ŞÀÌÁö
 	case 3:
 		{
 			bonus = 5.f;
 			break;
 		}
-		// 100218 ShinJS --- ë§ˆì¡±
+		// 100218 ShinJS --- ¸¶Á·
 	case 4:
 		{
 			bonus = 9.f;
 			break;
 		}
 	}
-
-	return ( float( GetDexterity() / 27.f ) + rate + bonus );
+	// Decrese Block Chance From Devide by 27 to devide by 270
+	return ( float( GetDexterity() / 270.f ) + rate + bonus );
 }
 
 float CPlayer::GetPhysicAttackMax()
@@ -3684,19 +4472,19 @@ float CPlayer::GetManaRecover()
 }
 
 ////////////////////////////////////////////////////////////////////////////
-// 06. 07. ìƒíƒœê°•ì œë³€ê²½ - ì´ì˜ì¤€
-// ì¼ì •ì´ìƒ ìŠ¤í‚¬ ì‚¬ìš©ì‹¤íŒ¨ì‹œ íŠ¹ë³„í•œ ìƒíƒœë¥¼ ì œì™¸í•œ ë‚˜ë¨¸ì§€ ìƒíƒœëŠ” ëª¨ë‘ ì´ˆê¸°í™”
-// ì •ìƒì ì¸ ìƒíƒœì—ì„œëŠ” ê°’ì„ ì´ˆê¸°í™”
-// ì‹¤íŒ¨ê°’ì„ ëˆ„ì í•˜ì§€ ì•ŠëŠ”ë‹¤.
-// ì—°ì† ì‹¤íŒ¨ì‹œì—ë§Œ ìƒíƒœí•´ì œ
+// 06. 07. »óÅÂ°­Á¦º¯°æ - ÀÌ¿µÁØ
+// ÀÏÁ¤ÀÌ»ó ½ºÅ³ »ç¿ë½ÇÆĞ½Ã Æ¯º°ÇÑ »óÅÂ¸¦ Á¦¿ÜÇÑ ³ª¸ÓÁö »óÅÂ´Â ¸ğµÎ ÃÊ±âÈ­
+// Á¤»óÀûÀÎ »óÅÂ¿¡¼­´Â °ªÀ» ÃÊ±âÈ­
+// ½ÇÆĞ°ªÀ» ´©ÀûÇÏÁö ¾Ê´Â´Ù.
+// ¿¬¼Ó ½ÇÆĞ½Ã¿¡¸¸ »óÅÂÇØÁ¦
 BOOL CPlayer::CanSkillState()
 {
-	//ì—°ì† 5íšŒ ì´ìƒ ì‹¤íŒ¨ì‹œ
+	//¿¬¼Ó 5È¸ ÀÌ»ó ½ÇÆĞ½Ã
 	if(m_SkillFailCount >= 5)
 	{
 		switch(m_BaseObjectInfo.ObjectState)
 		{
-		// ìŠ¤í‚¬ì„ ì‚¬ìš©í• ìˆ˜ ìˆëŠ” ìƒíƒœë©´ ê°’ì„ ì´ˆê¸°í™”í•˜ê³  TRUE ë¦¬í„´
+		// ½ºÅ³À» »ç¿ëÇÒ¼ö ÀÖ´Â »óÅÂ¸é °ªÀ» ÃÊ±âÈ­ÇÏ°í TRUE ¸®ÅÏ
 		case eObjectState_None:
 		case eObjectState_Move:
 		case eObjectState_TiedUp_CanSkill:
@@ -3705,10 +4493,10 @@ BOOL CPlayer::CanSkillState()
 				return TRUE;
 			}
 			break;
-		// ìŠ¤í‚¬ì„ ì‚¬ìš©í• ìˆ˜ ì—†ëŠ” ìƒíƒœì¤‘ í’€ì–´ì¤˜ë„ ë¬´ë°©í•œ ìƒíƒœë©´ ê°’ì„ ì´ˆê¸°í™” í•˜ê³ 
-		// ìƒíƒœë¥¼ ì´ˆê¸°í™” í•œë’¤ TRUE ë¦¬í„´
+		// ½ºÅ³À» »ç¿ëÇÒ¼ö ¾ø´Â »óÅÂÁß Ç®¾îÁàµµ ¹«¹æÇÑ »óÅÂ¸é °ªÀ» ÃÊ±âÈ­ ÇÏ°í
+		// »óÅÂ¸¦ ÃÊ±âÈ­ ÇÑµÚ TRUE ¸®ÅÏ
 		case eObjectState_SkillStart:
-		case eObjectState_SkillSyn:
+		case eObjectState_SkillSyn:	
 		case eObjectState_SkillBinding:
 		case eObjectState_SkillUsing:
 		case eObjectState_SkillDelay:
@@ -3721,7 +4509,7 @@ BOOL CPlayer::CanSkillState()
 				return TRUE;
 			}
 			break;
-		// ê·¸ ì™¸ì˜ ê²½ìš°ì—” ê°’ì„ ì´ˆê¸°í™” í•˜ê³  FALSE ë¦¬í„´
+		// ±× ¿ÜÀÇ °æ¿ì¿£ °ªÀ» ÃÊ±âÈ­ ÇÏ°í FALSE ¸®ÅÏ
 		default:
 			{
 				m_SkillFailCount = 0;
@@ -3731,8 +4519,8 @@ BOOL CPlayer::CanSkillState()
 		}
 	}
 
-	// 5íšŒ ì´í•˜ ì¼ë•Œ ìŠ¤í‚¬ì„ ì‚¬ìš©í• ìˆ˜ ì—†ëŠ” ìƒíƒœë©´
-	// ê°’ì„ ì¦ê°€í•˜ê³  FALSE ë¦¬í„´
+	// 5È¸ ÀÌÇÏ ÀÏ¶§ ½ºÅ³À» »ç¿ëÇÒ¼ö ¾ø´Â »óÅÂ¸é
+	// °ªÀ» Áõ°¡ÇÏ°í FALSE ¸®ÅÏ
 	if(m_BaseObjectInfo.ObjectState != eObjectState_None &&
 	   m_BaseObjectInfo.ObjectState != eObjectState_Move &&
 	   m_BaseObjectInfo.ObjectState != eObjectState_TiedUp_CanSkill )
@@ -3741,7 +4529,7 @@ BOOL CPlayer::CanSkillState()
 		return FALSE;
 	}
 
-	// ì •ìƒ ìƒíƒœì¼ë•Œ ê°’ì„ ì´ˆê¸°í™”í•˜ê³  TRUE ë¦¬í„´
+	// Á¤»ó »óÅÂÀÏ¶§ °ªÀ» ÃÊ±âÈ­ÇÏ°í TRUE ¸®ÅÏ
 	m_SkillFailCount = 0;
 	return TRUE;
 }
@@ -3757,8 +4545,8 @@ SLOT_INFO*	CPlayer::GetQuick( BYTE sheet, WORD pos )
 	return m_QuickSlot[ sheet ].GetQuick( pos );
 }
 
-// desc_hseos_ëª¬ìŠ¤í„°ë¯¸í„°01
-// S ëª¬ìŠ¤í„°ë¯¸í„° ì¶”ê°€ added by hseos 2007.05.23	2007.07.08
+// desc_hseos_¸ó½ºÅÍ¹ÌÅÍ01
+// S ¸ó½ºÅÍ¹ÌÅÍ Ãß°¡ added by hseos 2007.05.23	2007.07.08
 void CPlayer::ProcMonstermeterPlayTime()
 {
 	if (gCurTime - m_stMonstermeterInfo.nPlayTimeTick > SHMath_MINUTE(1))
@@ -3767,14 +4555,14 @@ void CPlayer::ProcMonstermeterPlayTime()
 		m_stMonstermeterInfo.nPlayTime++;
 		m_stMonstermeterInfo.nPlayTimeTotal++;
 
-		// DBì— ì €ì¥
+		// DB¿¡ ÀúÀå
 		//MonsterMeter_Save(GetID(), m_stMonstermeterInfo.nPlayTime, m_stMonstermeterInfo.nKillMonsterNum, m_stMonstermeterInfo.nPlayTimeTotal, m_stMonstermeterInfo.nKillMonsterNumTotal);
 
-		// í”Œë ˆì´ì‹œê°„ì€ í´ë¼ì´ì–¸íŠ¸ì—ì„œë„ ê³„ì‚° ê°€ëŠ¥í•˜ë¯€ë¡œ í´ë¼ì´ì–¸íŠ¸ì—ì„œ ê³„ì‚°í•˜ë„ë¡ í•˜ê³ 
-		// í˜¹ì‹œ ëª¨ë¥¼ ì˜¤ì°¨Â‹Âšë¬¸ì— 10ë¶„ë§ˆë‹¤ ì„œë²„ì˜ ìˆ˜ì¹˜ë¥¼ ë³´ë‚´ì¤€ë‹¤.
+		// ÇÃ·¹ÀÌ½Ã°£Àº Å¬¶óÀÌ¾ğÆ®¿¡¼­µµ °è»ê °¡´ÉÇÏ¹Ç·Î Å¬¶óÀÌ¾ğÆ®¿¡¼­ °è»êÇÏµµ·Ï ÇÏ°í
+		// È¤½Ã ¸ğ¸¦ ¿ÀÂ÷‹š¹®¿¡ 10ºĞ¸¶´Ù ¼­¹öÀÇ ¼öÄ¡¸¦ º¸³»ÁØ´Ù.
 		if ((m_stMonstermeterInfo.nPlayTime%10) == 0)
 		{
-			// í´ë¼ì´ì–¸íŠ¸ì— ì•Œë¦¬ê¸°
+			// Å¬¶óÀÌ¾ğÆ®¿¡ ¾Ë¸®±â
 			MSG_DWORD2 msg;
 			msg.Category = MP_CHAR;
 			msg.Protocol = MP_CHAR_MONSTERMETER_PLAYTIME;
@@ -3788,23 +4576,24 @@ void CPlayer::ProcMonstermeterPlayTime()
 		{
 			WebEvent( GetUserID(), 6 );
 		}
-		// ë³´ìƒ ì²˜ë¦¬
+		// º¸»ó Ã³¸®
 		g_csMonstermeterManager.ProcessReward(this, CSHMonstermeterManager::RBT_PLAYTIME, m_stMonstermeterInfo.nPlayTimeTotal);
 	}
 }
-// E ëª¬ìŠ¤í„°ë¯¸í„° ì¶”ê°€ added by hseos 2007.05.23	2007.07.08
+// E ¸ó½ºÅÍ¹ÌÅÍ Ãß°¡ added by hseos 2007.05.23	2007.07.08
 
-// desc_hseos_ëª¬ìŠ¤í„°ë¯¸í„°01
-// S ëª¬ìŠ¤í„°ë¯¸í„° ì¶”ê°€ added by hseos 2007.05.23	2007.07.08
+// desc_hseos_¸ó½ºÅÍ¹ÌÅÍ01
+// S ¸ó½ºÅÍ¹ÌÅÍ Ãß°¡ added by hseos 2007.05.23	2007.07.08
 void CPlayer::ProcMonstermeterKillMon()
 {
 	m_stMonstermeterInfo.nKillMonsterNum++;
 	m_stMonstermeterInfo.nKillMonsterNumTotal++;
+	m_VerifyKillCount++;
 
-	// DBì— ì €ì¥
+	// DB¿¡ ÀúÀå
 	//MonsterMeter_Save(GetID(), m_stMonstermeterInfo.nPlayTime, m_stMonstermeterInfo.nKillMonsterNum, m_stMonstermeterInfo.nPlayTimeTotal, m_stMonstermeterInfo.nKillMonsterNumTotal);
 
-	// í´ë¼ì´ì–¸íŠ¸ì— ì•Œë¦¬ê¸°
+	// Å¬¶óÀÌ¾ğÆ®¿¡ ¾Ë¸®±â
 	MSG_DWORD2 msg;
 	msg.Category = MP_CHAR;
 	msg.Protocol = MP_CHAR_MONSTERMETER_KILLMONSTER;
@@ -3817,8 +4606,20 @@ void CPlayer::ProcMonstermeterKillMon()
 	{
 		WebEvent( GetUserID(), 9 );
 	}
+	
+	if(m_VerifyKillCount > 500 && m_VerifyCaptcha == 0) 
+	{
+		m_VerifyCaptcha = random(1000, 9999);
 
-	// ë³´ìƒ ì²˜ë¦¬
+		MSG_DWORD2 msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_USERCONN_CAPTCHA_SYN;
+		msg.dwObjectID = GetID();
+		msg.dwData1 = m_VerifyCaptcha;
+		msg.dwData2 = 2;
+		SendMsg( &msg, sizeof(msg) );
+	}
+	// º¸»ó Ã³¸®
 	g_csMonstermeterManager.ProcessReward(this, CSHMonstermeterManager::RBT_MONSTERKILL, m_stMonstermeterInfo.nKillMonsterNumTotal);
 }
 
@@ -3831,7 +4632,7 @@ void CPlayer::ProcFarmTime()
 			m_stFarmInfo.nCropPlantRetryTimeTick = gCurTime;
 			m_stFarmInfo.nCropPlantRetryTime--;
 
-			// DBì— ì €ì¥
+			// DB¿¡ ÀúÀå
 			Farm_SetTimeDelay(GetID(), CSHFarmManager::FARM_TIMEDELAY_KIND_PLANT, m_stFarmInfo.nCropPlantRetryTime);
 		}
 	}
@@ -3843,11 +4644,11 @@ void CPlayer::ProcFarmTime()
 			m_stFarmInfo.nCropManureRetryTimeTick = gCurTime;
 			m_stFarmInfo.nCropManureRetryTime--;
 
-			// DBì— ì €?			Farm_SetTimeDelay(GetID(), CSHFarmManager::FARM_TIMEDELAY_KIND_MANURE, m_stFarmInfo.nCropManureRetryTime);
+			// DB¿¡ Àú?			Farm_SetTimeDelay(GetID(), CSHFarmManager::FARM_TIMEDELAY_KIND_MANURE, m_stFarmInfo.nCropManureRetryTime);
 		}
 	}
 
-	// 080430 KTH Animal Delay Add  (ë¶„)ë‹¨ìœ„ëŠ” ì—¬ê¸°ì„œ ìˆ˜ì¹˜ë¥¼ Decrease í•´ì£¼ëŠ”êµ°...
+	// 080430 KTH Animal Delay Add  (ºĞ)´ÜÀ§´Â ¿©±â¼­ ¼öÄ¡¸¦ Decrease ÇØÁÖ´Â±º...
 	if( m_stFarmInfo.nAnimalCleanRetryTime )
 	{
 		if( gCurTime - m_stFarmInfo.nAnimalCleanRetryTimeTick > SHMath_MINUTE(1) )
@@ -3870,7 +4671,7 @@ void CPlayer::ProcFarmTime()
 		}
 	}
 }
-// E ë†ì¥ì‹œìŠ¤í…œ ì¶”ê°€ added by hseos 2007.08.23
+// E ³óÀå½Ã½ºÅÛ Ãß°¡ added by hseos 2007.08.23
 
 BOOL CPlayer::IsInventoryPosition( POSTYPE position )
 {
@@ -3882,6 +4683,7 @@ BOOL CPlayer::IsInventoryPosition( POSTYPE position )
 	return begin <= position && end >= position;
 }
 
+
 void CPlayer::ResetSetItemStatus()
 {
 	mSetItemLevel.clear();
@@ -3890,10 +4692,12 @@ void CPlayer::ResetSetItemStatus()
 		sizeof(m_SetItemStats));
 }
 
+
 const CPlayer::SetItemLevel& CPlayer::GetSetItemLevel() const
 {
 	return mSetItemLevel;
 }
+
 
 CPlayer::SetItemLevel& CPlayer::GetSetItemLevel()
 {
@@ -3949,6 +4753,7 @@ void CPlayer::AddSetSkill(DWORD skillIndex, LEVELTYPE level)
 		skill);
 }
 
+
 void CPlayer::RemoveSetSkill(DWORD skillIndex, LEVELTYPE level)
 {
 	SKILL_BASE* const oldSkill = m_SkillTree->GetData(
@@ -3966,11 +4771,11 @@ void CPlayer::RemoveSetSkill(DWORD skillIndex, LEVELTYPE level)
 		skill);
 }
 
-// 090217 LUJ, ëª©ì ì— ë§ë„ë¡ í•¨ìˆ˜ ì´ë¦„ ë³€ê²½
+// 090217 LUJ, ¸ñÀû¿¡ ¸Âµµ·Ï ÇÔ¼ö ÀÌ¸§ º¯°æ
 void CPlayer::SetHideLevel( WORD level )
-{
-	m_HeroCharacterInfo.HideLevel = level;
-
+{ 
+	m_HeroCharacterInfo.HideLevel = level; 
+	
 	if( level )
 	{
 		m_HeroCharacterInfo.bVisible = false;
@@ -3986,22 +4791,22 @@ void CPlayer::SetHideLevel( WORD level )
 	msg.dwObjectID = GetID();
 	msg.wData = level;
 
-	PACKEDDATA_OBJ->QuickSend( this, &msg, sizeof( msg ) );
+	PACKEDDATA_OBJ->QuickSend( this, &msg, sizeof( msg ) );	
 }
 
-// 090217 LUJ, ëª©ì ì— ë§ê²Œ í•¨ìˆ˜ ì´ë¦„ ë³€ê²½
+// 090217 LUJ, ¸ñÀû¿¡ ¸Â°Ô ÇÔ¼ö ÀÌ¸§ º¯°æ
 void CPlayer::SetDetectLevel( WORD level )
-{
-	m_HeroCharacterInfo.DetectLevel = level;
-
+{ 
+	m_HeroCharacterInfo.DetectLevel = level; 
+	
 	MSG_WORD msg;
 	msg.Category = MP_CHAR;
 	msg.Protocol = MP_CHAR_DETECT_NOTIFY;
 	msg.dwObjectID = GetID();
 	msg.wData = level;
 
-	PACKEDDATA_OBJ->QuickSend( this, &msg, sizeof( msg ) );
-}
+	PACKEDDATA_OBJ->QuickSend( this, &msg, sizeof( msg ) );	
+}	
 
 void CPlayer::RemoveAllAggroed()
 {
@@ -4049,13 +4854,13 @@ void CPlayer::AddAggroToMyMonsters(int nAggroAdd, DWORD targetObjectIndex, DWORD
 	}
 }
 
-// 080910 LUJ, ë°©íŒ¨ì˜ ë°©ì–´ë ¥ì„ ë°˜í™˜í•œë‹¤
+// 080910 LUJ, ¹æÆĞÀÇ ¹æ¾î·ÂÀ» ¹İÈ¯ÇÑ´Ù
 DWORD CPlayer::GetShieldDefense()
 {
 	return mShieldDefense;
 }
 
-// 080910 LUJ, ë°©íŒ¨ì˜ ë°©ì–´ë ¥ì„ ì„¤ì •í•œë‹¤
+// 080910 LUJ, ¹æÆĞÀÇ ¹æ¾î·ÂÀ» ¼³Á¤ÇÑ´Ù
 void CPlayer::SetShieldDefence( DWORD shieldDefense )
 {
 	mShieldDefense = shieldDefense;
@@ -4085,6 +4890,7 @@ void CPlayer::RemoveCoolTime( DWORD coolTimeGroupIndex)
 		coolTimeGroupIndex);
 }
 
+
 void CPlayer::ProcCoolTime()
 {
 	if(true == mCoolTimeMap.empty())
@@ -4103,7 +4909,7 @@ void CPlayer::ProcCoolTime()
 		if( ( time.mBeginTick < time.mEndTick && time.mEndTick < tick ) ||
 			( time.mBeginTick > time.mEndTick && time.mBeginTick > tick && time.mEndTick < tick ) )
 		{
-			// ì£¼ì˜: ì‚­ì œí•œ ì´í›„ì—ëŠ” ë°˜ë³µìê°€ ì˜ëª»ëœë‹¤ëŠ” ì‚¬ì‹¤ì„ ëª…ì‹¬. ë”°ë¼ì„œ ë‹¤ìŒ í”„ë¡œì„¸ìŠ¤ì—ì„œ ì²˜ë¦¬í•´ì•¼ í•œë‹¤.
+			// ÁÖÀÇ: »èÁ¦ÇÑ ÀÌÈÄ¿¡´Â ¹İº¹ÀÚ°¡ Àß¸øµÈ´Ù´Â »ç½ÇÀ» ¸í½É. µû¶ó¼­ ´ÙÀ½ ÇÁ·Î¼¼½º¿¡¼­ Ã³¸®ÇØ¾ß ÇÑ´Ù.
 			group.insert( it->first );
 		}
 	}
@@ -4114,8 +4920,8 @@ void CPlayer::ProcCoolTime()
 	}
 }
 
-DWORD CPlayer::GetVitality()
-{
+DWORD CPlayer::GetVitality() 
+{ 
 	const float rate =
 		mRatePassiveStatus.Vit +
 		mRateBuffStatus.Vit +
@@ -4138,8 +4944,8 @@ DWORD CPlayer::GetVitality()
 	return (DWORD)( Round( Result, 1 ) );
 }
 
-DWORD CPlayer::GetWisdom()
-{
+DWORD CPlayer::GetWisdom() 
+{ 
 	const float	rate =
 		mRatePassiveStatus.Wis +
 		mRateBuffStatus.Wis +
@@ -4162,7 +4968,7 @@ DWORD CPlayer::GetWisdom()
 	return (DWORD)( Round( Result, 1 ) );
 }
 
-DWORD CPlayer::GetStrength()
+DWORD CPlayer::GetStrength() 
 {
 	const float	rate =
 		mRatePassiveStatus.Str +
@@ -4186,8 +4992,8 @@ DWORD CPlayer::GetStrength()
 	return (DWORD)( Round( Result, 1 ) );
 }
 
-DWORD CPlayer::GetDexterity()
-{
+DWORD CPlayer::GetDexterity() 
+{ 
 	const float rate =
 		mRatePassiveStatus.Dex +
 		mRateBuffStatus.Dex +
@@ -4210,7 +5016,7 @@ DWORD CPlayer::GetDexterity()
 	return (DWORD)( Round( Result, 1 ) );
 }
 
-DWORD CPlayer::GetIntelligence()
+DWORD CPlayer::GetIntelligence() 
 {
 	const float rate =
 		mRatePassiveStatus.Int +
@@ -4235,8 +5041,8 @@ DWORD CPlayer::GetIntelligence()
 }
 
 void CPlayer::SetObjectBattleState(eObjectBattleState state)
-{
-	m_BaseObjectInfo.ObjectBattleState = state;
+{ 
+	m_BaseObjectInfo.ObjectBattleState = state; 
 
 	if( state )	//eObjectBattleState_Battle
 	{
@@ -4294,7 +5100,7 @@ void CPlayer::ProcessTimeCheckItem( BOOL bForceDBUpdate )
 			{
 				pItemBase->nRemainSecond -= dwElapsedSecond;
 
-				// 071125 KTH --- Player "RemainSecondê°€ 1ë¶„ ë¯¸ë§Œì¼ ê²½ìš° í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ì •ë³´ë¥¼ ë³´ë‚´ì¤€ë‹¤."
+				// 071125 KTH --- Player "RemainSecond°¡ 1ºĞ ¹Ì¸¸ÀÏ °æ¿ì Å¬¶óÀÌ¾ğÆ®¿¡°Ô Á¤º¸¸¦ º¸³»ÁØ´Ù."
 				if( pItemBase->nRemainSecond <= 60 )
 				{
 					MSG_DWORD2 msg;
@@ -4302,7 +5108,7 @@ void CPlayer::ProcessTimeCheckItem( BOOL bForceDBUpdate )
 					msg.Protocol = MP_ITEM_TIMELIMT_ITEM_ONEMINUTE;
 					msg.dwData1 = pItemBase->wIconIdx;
 					msg.dwData2 = pItemBase->Position;
-
+	
 					SendMsg(&msg, sizeof(msg));
 				}
 
@@ -4332,7 +5138,7 @@ void CPlayer::ProcessTimeCheckItem( BOOL bForceDBUpdate )
 				{
 					CVehicle* const vehicle = ( CVehicle* )g_pUserTable->FindUser( GetSummonedVehicle() );
 
-					// 090316 LUJ, í•´ë‹¹ ì•„ì´í…œìœ¼ë¡œ ì†Œí™˜ëœ íƒˆ ê²ƒì„ ì†Œí™˜ í•´ì œí•œë‹¤
+					// 090316 LUJ, ÇØ´ç ¾ÆÀÌÅÛÀ¸·Î ¼ÒÈ¯µÈ Å» °ÍÀ» ¼ÒÈ¯ ÇØÁ¦ÇÑ´Ù
 					if( vehicle &&
 						vehicle->GetObjectKind() == eObjectKind_Vehicle )
 					{
@@ -4351,7 +5157,7 @@ void CPlayer::ProcessTimeCheckItem( BOOL bForceDBUpdate )
 					msg.TargetPos = position;
 					msg.wItemIdx = iconIdx;
 					msg.ItemNum = 1;
-					SendMsg(&msg, sizeof(msg));
+					SendMsg(&msg, sizeof(msg));	
 
 					LogItemMoney(
 						GetID(),
@@ -4373,7 +5179,7 @@ void CPlayer::ProcessTimeCheckItem( BOOL bForceDBUpdate )
 		}
 	}
 
-	// NYJ - ì‹œê°„ì œ ìš”ë¦¬ë ˆì‹œí”¼ ì‹œê°„ì†Œëª¨
+	// NYJ - ½Ã°£Á¦ ¿ä¸®·¹½ÃÇÇ ½Ã°£¼Ò¸ğ
 	ProcessRecipeTimeCheck(dwElapsedMili);
 
 	{
@@ -4388,13 +5194,13 @@ void CPlayer::ProcessTimeCheckItem( BOOL bForceDBUpdate )
 		}
 	}
 
-	// 100525 NYJ - íŒë§¤ëŒ€í–‰ ë“±ë¡ìƒí’ˆì— ëŒ€í•´ ì‹œê°„ê²½ê³¼ì²´í¬ ìˆ˜í–‰
+	// 100525 NYJ - ÆÇ¸Å´ëÇà µî·Ï»óÇ°¿¡ ´ëÇØ ½Ã°£°æ°úÃ¼Å© ¼öÇà
 	Consignment_CheckDate(GetID());
 	Note_CheckDate(GetID());
 }
 
-// desc_hseos_ê²°í˜¼_01
-// S ê²°í˜¼ ì¶”ê°€ added by hseos 2008.01.29
+// desc_hseos_°áÈ¥_01
+// S °áÈ¥ Ãß°¡ added by hseos 2008.01.29
 BOOL CPlayer::RemoveItem(DWORD nItemID, DWORD nItemNum, eLogitemmoney eLogKind)
 {
 	int iCheckItemMaxNum = TP_WEAR_END;
@@ -4441,13 +5247,14 @@ BOOL CPlayer::RemoveItem(DWORD nItemID, DWORD nItemNum, eLogitemmoney eLogKind)
 			msg.TargetPos = position;
 			msg.wItemIdx = iconIdx;
 			msg.ItemNum = nItemNum;
-			SendMsg(&msg, sizeof(msg));
+			SendMsg(&msg, sizeof(msg));	
 		}
 	}
 
 	return TRUE;
 }
-// E ê²°í˜¼ ì¶”ê°€ added by hseos 2008.01.29
+// E °áÈ¥ Ãß°¡ added by hseos 2008.01.29
+
 
 BOOL CPlayer::IncreaseInventoryExpansion()
 {
@@ -4473,9 +5280,9 @@ void CPlayer::PassiveSkillCheckForWeareItem()
 		const DWORD skillLevel = min(
 			pSkillBase->Level,
 			SKILLMGR->GetSkillSize(pSkillBase->wSkillIdx));
-		const cActiveSkillInfo* const pSkill = SKILLMGR->GetActiveInfo(
+		const cActiveSkillInfo* const pSkill = SKILLMGR->GetActiveInfo( 
 			pSkillBase->wSkillIdx - 1 + skillLevel);
-
+		
 		if(0 == pSkill)
 		{
 			continue;
@@ -4542,9 +5349,9 @@ void CPlayer::SetFishingExp(EXPTYPE dwExp)
 		m_dwFishingExp = 0;
 		return;
 	}
-
-	// ê²½í—˜ì¹˜ê°€ ë‹¤ìŒ ë‹¨ê³„ì—ì„œ ìš”êµ¬í•˜ëŠ” ê²ƒë³´ë‹¤ í›¨ì”¬ ë§ì„ ìˆ˜ ìˆìœ¼ë¯€ë¡œ,
-	// ê³„ì† ì²´í¬í•´ì„œ ë ˆë²¨ì—…í•˜ì
+	
+	// °æÇèÄ¡°¡ ´ÙÀ½ ´Ü°è¿¡¼­ ¿ä±¸ÇÏ´Â °Íº¸´Ù ÈÎ¾À ¸¹À» ¼ö ÀÖÀ¸¹Ç·Î,
+	// °è¼Ó Ã¼Å©ÇØ¼­ ·¹º§¾÷ÇÏÀÚ
 	{
 		EXPTYPE nextPoint = 0 ;
 		nextPoint = GAMERESRCMNGR->GetFishingMaxExpPoint( level ) ;
@@ -4570,7 +5377,7 @@ void CPlayer::SetFishingExp(EXPTYPE dwExp)
 				msg.Category = MP_FISHING;
 				msg.Protocol = MP_FISHING_LEVELUP_NACK;
 				msg.wData = m_wFishingLevel;
-				SendMsg(&msg, sizeof(msg));
+				SendMsg(&msg, sizeof(msg));	
 				break;
 			}
 
@@ -4584,14 +5391,14 @@ void CPlayer::SetFishingExp(EXPTYPE dwExp)
 				dwExp - nextPoint,
 				GetFishingLevel() );
 
-			// 100607 NYJ ë³´ì¡°ê¸°ìˆ  ë ˆë²¨ì—…ì‹œ ì•„ì´í…œì§€ê¸‰
+			// 100607 NYJ º¸Á¶±â¼ú ·¹º§¾÷½Ã ¾ÆÀÌÅÛÁö±Ş
 			DWORD dwRewardItem = GAMERESRCMNGR->GetFishingLevelUpReward(level);
 			if(dwRewardItem)
 			{
 				ITEM_INFO* pInfo = ITEMMGR->GetItemInfo(dwRewardItem);
 				if(pInfo)
 				{
-					// 2286, 2287, "2288" ëŠ” SystemMsg.binì˜ ì¸ë±ìŠ¤
+					// 2286, 2287, "2288" ´Â SystemMsg.binÀÇ ÀÎµ¦½º
 					ItemInsertToNote(GetID(), dwRewardItem, 1, pInfo->wSeal, 0, eNoteParsing_FishingLevelUp, 2286, 2287, "2288");
 				}
 			}
@@ -4605,7 +5412,7 @@ void CPlayer::SetFishingExp(EXPTYPE dwExp)
 			msg.Category = MP_FISHING;
 			msg.Protocol = MP_FISHING_LEVELUP_ACK;
 			msg.wData = m_wFishingLevel;
-			SendMsg(&msg, sizeof(msg));
+			SendMsg(&msg, sizeof(msg));	
 
 			dwExp		-=	nextPoint;
 			nextPoint	=	GAMERESRCMNGR->GetFishingMaxExpPoint( level );
@@ -4615,61 +5422,61 @@ void CPlayer::SetFishingExp(EXPTYPE dwExp)
 	}
 }
 
-// 080509 LUJ, ìŠ¤í‚¬ ì¿¨íƒ€ì„ì´ ì§€ë‚˜ì§€ ì•Šì•˜ìœ¼ë©´ ì°¸ì„ ë°˜í™˜í•œë‹¤
-// 080514 LUJ, ìŠ¤í‚¬ ì• ë‹ˆë©”ì´ì…˜ ì‹œê°„ ì²´í¬
-// 080515 LUJ, ì¿¨íƒ€ì„ê³¼ ì• ë‹ˆë©”ì´ì…˜ ì‹œê°„ ì²´í¬ë¡œ ì¸í•´ ìŠ¤í‚¬ì´ ì–¼ë§ˆë‚˜ ì‹¤íŒ¨í•˜ëŠ”ì§€ ì ê²€í•˜ê¸° ìœ„í•´ ë¡œê·¸ë¥¼ ì‘ì„±í•œë‹¤
-// 080516 LUJ, ì¿¨íƒ€ì„ ì²´í¬ ì‹¤íŒ¨ê°€ í—ˆìš© ë²”ìœ„ ì´ìƒì¼ ë•Œ ì ‘ì†ì„ ì¢…ë£Œì‹œí‚´
+// 080509 LUJ, ½ºÅ³ ÄğÅ¸ÀÓÀÌ Áö³ªÁö ¾Ê¾ÒÀ¸¸é ÂüÀ» ¹İÈ¯ÇÑ´Ù
+// 080514 LUJ, ½ºÅ³ ¾Ö´Ï¸ŞÀÌ¼Ç ½Ã°£ Ã¼Å©
+// 080515 LUJ, ÄğÅ¸ÀÓ°ú ¾Ö´Ï¸ŞÀÌ¼Ç ½Ã°£ Ã¼Å©·Î ÀÎÇØ ½ºÅ³ÀÌ ¾ó¸¶³ª ½ÇÆĞÇÏ´ÂÁö Á¡°ËÇÏ±â À§ÇØ ·Î±×¸¦ ÀÛ¼ºÇÑ´Ù
+// 080516 LUJ, ÄğÅ¸ÀÓ Ã¼Å© ½ÇÆĞ°¡ Çã¿ë ¹üÀ§ ÀÌ»óÀÏ ¶§ Á¢¼ÓÀ» Á¾·á½ÃÅ´
 BOOL CPlayer::IsCoolTime( const ACTIVE_SKILL_INFO& skill )
 {
-	// 080516 LUJ, ì¿¨íƒ€ì„ ì‹¤íŒ¨ê°€ ë°œìƒí•´ë„ ì¼ì • íšŒìˆ˜ ì´ìƒì€ í—ˆìš©í•œë‹¤. ê·¸ ì´ìƒì´ ë°œìƒí•˜ë©´ ì ‘ì†ì„ ê°•ì œë¡œ ì¢…ë£Œì‹œí‚¨ë‹¤
+	// 080516 LUJ, ÄğÅ¸ÀÓ ½ÇÆĞ°¡ ¹ß»ıÇØµµ ÀÏÁ¤ È¸¼ö ÀÌ»óÀº Çã¿ëÇÑ´Ù. ±× ÀÌ»óÀÌ ¹ß»ıÇÏ¸é Á¢¼ÓÀ» °­Á¦·Î Á¾·á½ÃÅ²´Ù
 	struct
 	{
 		void operator() ( CPlayer& player, CPlayer::CheckCoolTime& checkCoolTime )
 		{
 			const DWORD maxCheckTick = 1000 * 60;
 
-			// 080516 LUJ, ì¿¨íƒ€ì„ ì‹¤íŒ¨ê°€ ë°œìƒí•œ ì§€ ì¼ì •í•œ ì‹œê°„ì´ ì§€ë‚¬ìœ¼ë©´ ì²´í¬ ë°ì´í„°ë¥¼ ì´ˆê¸°í™”í•œë‹¤
-			// 080519 LUJ, maxCheckTick ë‚´ì— ë°œìƒí•œ ì˜¤ë¥˜ ì²´í¬ë¥¼ í•˜ì§€ ëª»í•˜ë˜ ê²ƒ ìˆ˜ì •
+			// 080516 LUJ, ÄğÅ¸ÀÓ ½ÇÆĞ°¡ ¹ß»ıÇÑ Áö ÀÏÁ¤ÇÑ ½Ã°£ÀÌ Áö³µÀ¸¸é Ã¼Å© µ¥ÀÌÅÍ¸¦ ÃÊ±âÈ­ÇÑ´Ù
+			// 080519 LUJ, maxCheckTick ³»¿¡ ¹ß»ıÇÑ ¿À·ù Ã¼Å©¸¦ ÇÏÁö ¸øÇÏ´ø °Í ¼öÁ¤
 			if( maxCheckTick < ( checkCoolTime.mCheckedTick - gCurTime ) )
 			{
-				// 080519 LUJ, ì²´í¬ ì‹œê°„ì„ ì§€ê¸ˆë¶€í„° maxCheckTickë™ì•ˆìœ¼ë¡œ í•œë‹¤
+				// 080519 LUJ, Ã¼Å© ½Ã°£À» Áö±İºÎÅÍ maxCheckTickµ¿¾ÈÀ¸·Î ÇÑ´Ù
 				checkCoolTime.mCheckedTick	= gCurTime + maxCheckTick;
 				checkCoolTime.mFailureCount	= 0;
 			}
 
 			const DWORD maxCheckCount = 10;
 
-			// 080516 LUJ, ì¿¨íƒ€ì„ ì‹¤íŒ¨ê°€ í—ˆìš© íšŒìˆ˜ ì´í•˜ì´ë©´, ì²˜ë¦¬í•˜ì§€ ì•ŠëŠ”ë‹¤
+			// 080516 LUJ, ÄğÅ¸ÀÓ ½ÇÆĞ°¡ Çã¿ë È¸¼ö ÀÌÇÏÀÌ¸é, Ã³¸®ÇÏÁö ¾Ê´Â´Ù
 			if( maxCheckCount > ++checkCoolTime.mFailureCount )
 			{
 				return;
 			}
 
-			// 080516 LUJ, ì¼ì • íšŒìˆ˜ì´ìƒ ì‹¤íŒ¨í•œ ê²½ìš° ì ‘ì†ì„ ì¢…ë£Œì‹œí‚¨ë‹¤
+			// 080516 LUJ, ÀÏÁ¤ È¸¼öÀÌ»ó ½ÇÆĞÇÑ °æ¿ì Á¢¼ÓÀ» Á¾·á½ÃÅ²´Ù
 			{
 				MSG_DWORD message;
 				ZeroMemory( &message, sizeof( message ) );
 				message.Category	= MP_USERCONN;
 				message.Protocol	= MP_USERCONN_GAMEIN_NACK;
 				message.dwData		= player.GetID();
-
+				
 				g_Network.Broadcast2AgentServer( (char*)&message, sizeof( message ) );
 
-				// 100812 NYJ - ê°•ì œì¢…ë£Œ ì½˜ì†”ë¡œê·¸ë¥¼ ë‚¨ê¸°ì.
+				// 100812 NYJ - °­Á¦Á¾·á ÄÜ¼Ö·Î±×¸¦ ³²±âÀÚ.
 				g_Console.LOG(4, "Force KickOut!! (CoolTime Check Failed.) : ID: %d, NAME: %s",  player.GetID(), player.GetObjectName() );
 			}
 		}
 	}
 	Punish;
 
-	// 080514 LUJ, ì• ë‹ˆë©”ì´ì…˜ì´ í‘œì‹œë˜ëŠ” ìˆœê°„ì—ëŠ” ìŠ¤í‚¬ì„ ì‚¬ìš©í•  ìˆ˜ ì—†ë‹¤
+	// 080514 LUJ, ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ Ç¥½ÃµÇ´Â ¼ø°£¿¡´Â ½ºÅ³À» »ç¿ëÇÒ ¼ö ¾ø´Ù
 	const SkillAnimTimeMap::const_iterator itAnim = mSkillAnimTimeMap.find( skill.Index );
 	if(mSkillAnimTimeMap.end() != itAnim &&
 		itAnim->second > gCurTime)
 	{
-		// 080516 LUJ, ì¿¨íƒ€ì„ ì²´í¬ê°€ ì¼ì • ê¸°ì¤€ ì´ìƒ ì‹¤íŒ¨í–ˆì„ ë•Œ ë²Œì¹™ì„ ë¶€ì—¬í•œë‹¤
+		// 080516 LUJ, ÄğÅ¸ÀÓ Ã¼Å©°¡ ÀÏÁ¤ ±âÁØ ÀÌ»ó ½ÇÆĞÇßÀ» ¶§ ¹úÄ¢À» ºÎ¿©ÇÑ´Ù
 		Punish( *this, mCheckCoolTime );
-		// 080519 LUJ, ì¿¨íƒ€ì„ ì²´í¬ ì‹¤íŒ¨ ë•Œë„ ì‚¬ìš© ê°€ëŠ¥í•˜ê²Œ ë°˜í™˜í•œë‹¤. ì¼ì • íšŒìˆ˜ ì´ìƒ ì‹¤íŒ¨ ì‹œ ë²Œì¹™ì„ ë¶€ì—¬í•˜ê¸° ë•Œë¬¸
+		// 080519 LUJ, ÄğÅ¸ÀÓ Ã¼Å© ½ÇÆĞ ¶§µµ »ç¿ë °¡´ÉÇÏ°Ô ¹İÈ¯ÇÑ´Ù. ÀÏÁ¤ È¸¼ö ÀÌ»ó ½ÇÆĞ ½Ã ¹úÄ¢À» ºÎ¿©ÇÏ±â ¶§¹®
 		return FALSE;
 	}
 
@@ -4685,23 +5492,23 @@ BOOL CPlayer::IsCoolTime( const ACTIVE_SKILL_INFO& skill )
 
 	if( isCoolTime )
 	{
-		// 080516 LUJ, ì¿¨íƒ€ì„ ì²´í¬ê°€ ì¼ì • ê¸°ì¤€ ì´ìƒ ì‹¤íŒ¨í–ˆì„ ë•Œ ë²Œì¹™ì„ ë¶€ì—¬í•œë‹¤
+		// 080516 LUJ, ÄğÅ¸ÀÓ Ã¼Å©°¡ ÀÏÁ¤ ±âÁØ ÀÌ»ó ½ÇÆĞÇßÀ» ¶§ ¹úÄ¢À» ºÎ¿©ÇÑ´Ù
 		Punish( *this, mCheckCoolTime );
 	}
-
-	// 080519 LUJ, ì¿¨íƒ€ì„ ì²´í¬ ì‹¤íŒ¨ ë•Œë„ ì‚¬ìš© ê°€ëŠ¥í•˜ê²Œ ë°˜í™˜í•œë‹¤. ì¼ì • íšŒìˆ˜ ì´ìƒ ì‹¤íŒ¨ ì‹œ ë²Œì¹™ì„ ë¶€ì—¬í•˜ê¸° ë•Œë¬¸
+	
+	// 080519 LUJ, ÄğÅ¸ÀÓ Ã¼Å© ½ÇÆĞ ¶§µµ »ç¿ë °¡´ÉÇÏ°Ô ¹İÈ¯ÇÑ´Ù. ÀÏÁ¤ È¸¼ö ÀÌ»ó ½ÇÆĞ ½Ã ¹úÄ¢À» ºÎ¿©ÇÏ±â ¶§¹®
 	return FALSE;
 }
 
-// 080511 LUJ, ìŠ¤í‚¬ ì¿¨íƒ€ì„ì„ ì¶”ê°€í•œë‹¤
-// 080514 LUJ, ìŠ¤í‚¬ ì• ë‹ˆë©”ì´ì…˜ ì¢…ë£Œ ì‹œê°„ ì„¤ì •
-// 080605 LUJ, ìŠ¤í‚¬ ì¢…ë¥˜ì— ë”°ë¼ ì• ë‹ˆë©”ì´ì…˜ ì‹œê°„ì„ ë³€ê²½í•œë‹¤
+// 080511 LUJ, ½ºÅ³ ÄğÅ¸ÀÓÀ» Ãß°¡ÇÑ´Ù
+// 080514 LUJ, ½ºÅ³ ¾Ö´Ï¸ŞÀÌ¼Ç Á¾·á ½Ã°£ ¼³Á¤
+// 080605 LUJ, ½ºÅ³ Á¾·ù¿¡ µû¶ó ¾Ö´Ï¸ŞÀÌ¼Ç ½Ã°£À» º¯°æÇÑ´Ù
 void CPlayer::SetCoolTime( const ACTIVE_SKILL_INFO& skill )
 {
-	// 080605 LUJ, ì• ë‹ˆë©”ì´ì…˜ íƒ€ì„ì„ ìŠ¤í‚¬ ì¢…ë¥˜ì— ë”°ë¼ ê°€ë³€ì‹œí‚¤ê¸° ìœ„í•´ ë³€ìˆ˜ ì •ì˜
+	// 080605 LUJ, ¾Ö´Ï¸ŞÀÌ¼Ç Å¸ÀÓÀ» ½ºÅ³ Á¾·ù¿¡ µû¶ó °¡º¯½ÃÅ°±â À§ÇØ º¯¼ö Á¤ÀÇ
 	float animationTime = float( skill.AnimationTime );
 
-	// 080605 LUJ, ìŠ¤í‚¬ ì¢…ë¥˜ì— ë”°ë¼ ì• ë‹ˆë©”ì´ì…˜ íƒ€ì„ì„ ì ì ˆíˆ ê°€ê°í•œë‹¤.
+	// 080605 LUJ, ½ºÅ³ Á¾·ù¿¡ µû¶ó ¾Ö´Ï¸ŞÀÌ¼Ç Å¸ÀÓÀ» ÀûÀıÈ÷ °¡°¨ÇÑ´Ù.
 	{
 		const Status* ratePassiveStatus = GetRatePassiveStatus();
 		const Status* rateBuffStatus	= GetRateBuffStatus();
@@ -4731,12 +5538,12 @@ void CPlayer::SetCoolTime( const ACTIVE_SKILL_INFO& skill )
 			}
 		}
 	}
-
-	// 080514 LUJ, ì• ë‹ˆë©”ì´ì…˜ì´ ëë‚˜ëŠ” ì‹œê°„ì„ ì„¤ì •í•œë‹¤. ë„¤íŠ¸ì›Œí¬ ì§€ì—°ì„ ê°ì•ˆí•˜ì—¬ 0.1ì´ˆ ì˜¤ì°¨ëŠ” í—ˆìš©í•œë‹¤
-	// 080520 LUJ, í…ŒìŠ¤íŠ¸ ê²°ê³¼ë¡œ 0.1->0.3ì´ˆë¡œ í—ˆìš© ì‹œê°„ ì—°ì¥
-	// 080605 LUJ, ìµœì†Œ 0ì¸ ê°’ë§Œ í—ˆìš©í•œë‹¤. animationTimeì´ ì‹¤ìˆ˜ë¡œ ë³€ê²½ë˜ì–´ ì˜¤ë²„í”Œë¡œ ì—¬ì§€ê°€ ìˆê¸° ë•Œë¬¸
+	
+	// 080514 LUJ, ¾Ö´Ï¸ŞÀÌ¼ÇÀÌ ³¡³ª´Â ½Ã°£À» ¼³Á¤ÇÑ´Ù. ³×Æ®¿öÅ© Áö¿¬À» °¨¾ÈÇÏ¿© 0.1ÃÊ ¿ÀÂ÷´Â Çã¿ëÇÑ´Ù
+	// 080520 LUJ, Å×½ºÆ® °á°ú·Î 0.1->0.3ÃÊ·Î Çã¿ë ½Ã°£ ¿¬Àå
+	// 080605 LUJ, ÃÖ¼Ò 0ÀÎ °ª¸¸ Çã¿ëÇÑ´Ù. animationTimeÀÌ ½Ç¼ö·Î º¯°æµÇ¾î ¿À¹öÇÃ·Î ¿©Áö°¡ ÀÖ±â ¶§¹®
 	mSkillAnimTimeMap[ skill.Index ] = DWORD( max( 0, animationTime ) ) + gCurTime - 300;
-	mSkillCoolTimeMap[ skill.Index ] = skill.CoolTime + gCurTime - 300;
+	mSkillCoolTimeMap[ skill.Index ] = skill.CoolTime + gCurTime - 300;	
 }
 
 void CPlayer::ResetCoolTime( const ACTIVE_SKILL_INFO& skill )
@@ -4747,7 +5554,7 @@ void CPlayer::ResetCoolTime( const ACTIVE_SKILL_INFO& skill )
 
 BOOL CPlayer::IsCanCancelSkill()
 {
-	// 100618 ShinJS ì¼ì •ì‹œê°„ë‚´ì— íŠ¹ì •íšŒìˆ˜(í˜„ì¬3íšŒ)ì´ìƒ ìš”ì²­ì‹œ ì·¨ì†Œìš”ì²­ì— ì œí•œì„ ì¤€ë‹¤.
+	// 100618 ShinJS ÀÏÁ¤½Ã°£³»¿¡ Æ¯Á¤È¸¼ö(ÇöÀç3È¸)ÀÌ»ó ¿äÃ»½Ã Ãë¼Ò¿äÃ»¿¡ Á¦ÇÑÀ» ÁØ´Ù.
 	if( m_dwSkillCancelLastTime > gCurTime )
 	{
 		if( ++m_dwSkillCancelCount >= eSkillCancelLimit_Count )
@@ -4758,7 +5565,7 @@ BOOL CPlayer::IsCanCancelSkill()
 
 		return TRUE;
 	}
-
+	
 	m_dwSkillCancelCount = 0;
 	m_dwSkillCancelLastTime = gCurTime + eSkillCancelLimit_CheckTime;
 
@@ -4770,22 +5577,22 @@ const DWORD CPlayer::GetSkillCancelDelay() const
 	return eSkillCancelLimit_CheckTime;
 }
 
-// 100621 ShinJS í˜„ì¬ ìºìŠ¤íŒ…ì¤‘ì¸ ìŠ¤í‚¬ ì·¨ì†Œ
+// 100621 ShinJS ÇöÀç Ä³½ºÆÃÁßÀÎ ½ºÅ³ Ãë¼Ò
 void CPlayer::CancelCurrentCastingSkill( BOOL bUseSkillCancelRate )
 {
 	cActiveSkillObject* const activeSkillObject = ( cActiveSkillObject* )SKILLMGR->GetSkillObject( mCurrentSkillID );
 
-	// 090109 LUJ, ì•¡í‹°ë¸Œ ìŠ¤í‚¬ë§Œ ì·¨ì†Œë  ìˆ˜ ìˆë‹¤
-	// 090109 LUJ, ìºìŠ¤íŒ… ì¤‘ì—ë§Œ ì·¨ì†Œë  ìˆ˜ ìˆë„ë¡ ì²´í¬í•œë‹¤
-	if( ! activeSkillObject ||
+	// 090109 LUJ, ¾×Æ¼ºê ½ºÅ³¸¸ Ãë¼ÒµÉ ¼ö ÀÖ´Ù
+	// 090109 LUJ, Ä³½ºÆÃ Áß¿¡¸¸ Ãë¼ÒµÉ ¼ö ÀÖµµ·Ï Ã¼Å©ÇÑ´Ù
+	if( ! activeSkillObject || 
 		cSkillObject::TypeActive != activeSkillObject->GetType() ||
 		! activeSkillObject->IsCasting() )
 	{
 		return;
 	}
 
-	if( bUseSkillCancelRate &&
-		activeSkillObject->GetInfo().Cancel <= (rand() % 100) )
+	if( bUseSkillCancelRate && 
+		activeSkillObject->GetInfo().Cancel <= (rand() % 100) ) 
 	{
 		return;
 	}
@@ -4815,7 +5622,7 @@ eArmorType CPlayer::GetArmorType(EWEARED_ITEM wearType) const
 
 void CPlayer::AddSpecialSkill(const cBuffSkillInfo* buffSkillInfo)
 {
-	// 090204 LUJ, ì²˜ìŒì—ëŠ” í•­ìƒ ì ìš©í•œë‹¤. í”„ë¡œì„¸ìŠ¤ ë•Œ ê²€ì‚¬í•˜ë©´ì„œ ì¡°ê±´ì— ë§ì§€ ì•Šì„ ê²½ìš° í•´ì œí•œë‹¤
+	// 090204 LUJ, Ã³À½¿¡´Â Ç×»ó Àû¿ëÇÑ´Ù. ÇÁ·Î¼¼½º ¶§ °Ë»çÇÏ¸é¼­ Á¶°Ç¿¡ ¸ÂÁö ¾ÊÀ» °æ¿ì ÇØÁ¦ÇÑ´Ù
 	buffSkillInfo->AddBuffStatus( this );
 
 	SpecialSkillData specialSkillData = { 0 };
@@ -4845,7 +5652,7 @@ void CPlayer::RemoveSpecialSkill(const cBuffSkillInfo* buffSkillInfo)
 
 	const SpecialSkillData& specialSkillData = *it;
 
-	// 090204 LUJ, ì¡°ê±´ì— ë”°ë¼ ë¯¸ì ìš© ìƒíƒœì¼ ìˆ˜ ìˆìœ¼ë¯€ë¡œ ê²€ì‚¬ í›„ ì·¨ì†Œí•´ì•¼ í•œë‹¤
+	// 090204 LUJ, Á¶°Ç¿¡ µû¶ó ¹ÌÀû¿ë »óÅÂÀÏ ¼ö ÀÖÀ¸¹Ç·Î °Ë»ç ÈÄ Ãë¼ÒÇØ¾ß ÇÑ´Ù
 	if( specialSkillData.mIsTurnOn )
 	{
 		buffSkillInfo->RemoveBuffStatus( this );
@@ -4854,7 +5661,7 @@ void CPlayer::RemoveSpecialSkill(const cBuffSkillInfo* buffSkillInfo)
 	mSpecialSkillList.erase(it);
 }
 
-// 090204 LUJ, íŠ¹ìˆ˜ ìŠ¤í‚¬ì„ í”„ë¡œì„¸ìŠ¤ íƒ€ì„ì— ì²´í¬í•œë‹¤
+// 090204 LUJ, Æ¯¼ö ½ºÅ³À» ÇÁ·Î¼¼½º Å¸ÀÓ¿¡ Ã¼Å©ÇÑ´Ù
 void CPlayer::ProcSpecialSkill()
 {
 	if(true == mSpecialSkillList.empty())
@@ -4862,7 +5669,7 @@ void CPlayer::ProcSpecialSkill()
 		return;
 	}
 
-	// 090204 LUJ, íš¨ìœ¨ì„±ì„ ìœ„í•´ ì»¨í…Œì´ë„ˆ ë§¨ ì•ì˜ ìŠ¤í‚¬ì„ ê²€ì‚¬í•œ í›„ ë§¨ ë’¤ë¡œ ëŒë¦°ë‹¤
+	// 090204 LUJ, È¿À²¼ºÀ» À§ÇØ ÄÁÅ×ÀÌ³Ê ¸Ç ¾ÕÀÇ ½ºÅ³À» °Ë»çÇÑ ÈÄ ¸Ç µÚ·Î µ¹¸°´Ù
 	SpecialSkillData specialSkillData = mSpecialSkillList.front();
 	mSpecialSkillList.pop_front();
 
@@ -4882,7 +5689,7 @@ void CPlayer::ProcSpecialSkill()
 		specialSkillData.mIsTurnOn = FALSE;
 	}
 
-	// 090204 LUJ, ë‹¤ìŒ ê²€ì‚¬ë¥¼ ìœ„í•´ ì¶”ê°€í•œë‹¤
+	// 090204 LUJ, ´ÙÀ½ °Ë»ç¸¦ À§ÇØ Ãß°¡ÇÑ´Ù
 	mSpecialSkillList.push_back(
 		specialSkillData);
 }
@@ -4927,7 +5734,7 @@ void CPlayer::ProcessRecipeTimeCheck(DWORD dwElapsedTime)
 		{
 			if(dwElapsedMili > m_MasterRecipe[i].dwRemainTime)
 			{
-				// ì‚­ì œ
+				// »èÁ¦
 				DWORD dwRecipeIdx = m_MasterRecipe[i].dwRecipeIdx;
 				SetMasterRecipe(i, 0, 0);
 				Cooking_Recipe_Update(GetID(), eCOOKRECIPE_DEL, dwRecipeIdx, i, 0);
@@ -4945,7 +5752,7 @@ void CPlayer::ProcessRecipeTimeCheck(DWORD dwElapsedTime)
 			}
 			else
 			{
-				// ê°±ì‹ 
+				// °»½Å
 				DWORD dwRemainTime = m_MasterRecipe[i].dwRemainTime - dwElapsedMili;
 				SetMasterRecipe(i, m_MasterRecipe[i].dwRecipeIdx, dwRemainTime);
 				Cooking_Recipe_Update(GetID(), eCOOKRECIPE_UPDATE, m_MasterRecipe[i].dwRecipeIdx, i, dwRemainTime);
@@ -4971,14 +5778,14 @@ void CPlayer::ProceedToTrigger()
 		return;
 	}
 
-	// ë˜ì „ì˜µì €ë²„ëŠ” ë©”ì‹œì§€ë¥¼ ë°œìƒì‹œí‚¤ì§€ ì•ŠëŠ”ë‹¤.
+	// ´øÀü¿ÉÀú¹ö´Â ¸Ş½ÃÁö¸¦ ¹ß»ı½ÃÅ°Áö ¾Ê´Â´Ù.
 	if(m_bDungeonObserver)
 		return;
 
-	// 091116 LUJ, ì£¼ê¸°ì ìœ¼ë¡œ ë°œì†¡í•˜ëŠ” ë©”ì‹œì§€ ê°„ê²©ì„ ëŠ˜ë¦¼(0.5 -> 1.0ì´ˆ)
+	// 091116 LUJ, ÁÖ±âÀûÀ¸·Î ¹ß¼ÛÇÏ´Â ¸Ş½ÃÁö °£°İÀ» ´Ã¸²(0.5 -> 1.0ÃÊ)
 	const DWORD stepTick = 1000;
 	mNextCheckedTick = gCurTime + stepTick;
-	// 091116 LUJ, ì±„ë„ì— í•´ë‹¹í•˜ëŠ” ë©”ì‹œì§€ë¥¼ í• ë‹¹ë°›ë„ë¡ í•œë‹¤
+	// 091116 LUJ, Ã¤³Î¿¡ ÇØ´çÇÏ´Â ¸Ş½ÃÁö¸¦ ÇÒ´ç¹Şµµ·Ï ÇÑ´Ù
 	Trigger::CMessage* const message = TRIGGERMGR->AllocateMessage(GetGridID());
 	message->AddValue(Trigger::eProperty_ObjectIndex, GetID());
 	message->AddValue(Trigger::eProperty_ObjectKind, GetObjectKind());
@@ -4986,7 +5793,7 @@ void CPlayer::ProceedToTrigger()
 }
 
 float CPlayer::GetBonusRange() const
-{
+{	
 	const float value = mPassiveStatus.Range + mBuffStatus.Range;
 	const float percent = mRatePassiveStatus.Range + mRateBuffStatus.Range;
 
@@ -5240,14 +6047,14 @@ cSkillTree& CPlayer::GetSkillTree()
 
 void CPlayer::SetPartyIdx( DWORD PartyIDx )
 {
-	m_HeroInfo.PartyID = PartyIDx;
+	m_HeroInfo.PartyID = PartyIDx; 
 
 	if(m_HeroInfo.PartyID)
 	{
 		return;
 	}
 
-	// íŒŒí‹° ìƒíƒœì¼ ê²½ìš° íŠ¹ì • ìŠ¤í‚¬ì„ ì‚­ì œí•œë‹¤
+	// ÆÄÆ¼ »óÅÂÀÏ °æ¿ì Æ¯Á¤ ½ºÅ³À» »èÁ¦ÇÑ´Ù
 	{
 		cPtrList templist;
 		m_BuffSkillList.SetPositionHead();
@@ -5291,7 +6098,7 @@ CObject* CPlayer::GetTObject() const
 
 void CPlayer::AddToAggroed(DWORD objectIndex)
 {
-	// ë²„í”„ë¡œ ë°ë¯¸ì§€ë¥¼ ì…í ê²½ìš° ê³µê²©ìê°€ ìê¸° ìì‹ ì´ ëœë‹¤. ìì‹ ì„ ì–´ê·¸ë¡œ ì»¨í…Œì´ë„ˆì— ì €ì¥í•  í•„ìš”ëŠ” ì—†ë‹¤
+	// ¹öÇÁ·Î µ¥¹ÌÁö¸¦ ÀÔÈú °æ¿ì °ø°İÀÚ°¡ ÀÚ±â ÀÚ½ÅÀÌ µÈ´Ù. ÀÚ½ÅÀ» ¾î±×·Î ÄÁÅ×ÀÌ³Ê¿¡ ÀúÀåÇÒ ÇÊ¿ä´Â ¾ø´Ù
 	if(GetID() == objectIndex)
 	{
 		return;
@@ -5303,7 +6110,7 @@ void CPlayer::AddToAggroed(DWORD objectIndex)
 
 	if( pObject->GetObjectKind() & eObjectKind_Monster )
 	{
-		// 100616 ShinJS --- ìƒëŒ€ì—ê²Œ ìì‹ ì„ ë“±ë¡í•˜ë„ë¡ í•˜ì—¬ Die/Releaseì‹œ ì–´ê·¸ë¡œë¥¼ ì œê±°í• ìˆ˜ ìˆë„ë¡ í•œë‹¤.
+		// 100616 ShinJS --- »ó´ë¿¡°Ô ÀÚ½ÅÀ» µî·ÏÇÏµµ·Ï ÇÏ¿© Die/Release½Ã ¾î±×·Î¸¦ Á¦°ÅÇÒ¼ö ÀÖµµ·Ï ÇÑ´Ù.
 		((CMonster*)pObject)->AddToAggroed( GetID() );
 	}
 
@@ -5394,7 +6201,7 @@ void CPlayer::LogOnRelease()
 	}
 }
 
-// 100624 ONS HPì—…ë°ì´íŠ¸ê´€ë ¨ ì²˜ë¦¬ ì¶”ê°€
+// 100624 ONS HP¾÷µ¥ÀÌÆ®°ü·Ã Ã³¸® Ãß°¡
 void CPlayer::AddLifeRecoverTime( const YYRECOVER_TIME& recoverTime )
 {
 	m_YYLifeRecoverTimeQueue.push( recoverTime );
@@ -5413,7 +6220,7 @@ void CPlayer::UpdateLife()
 	{
 		if( FALSE == m_YYLifeRecoverTimeQueue.empty() )
 		{
-			// í•˜ë‚˜ì”© íì—ì„œ êº¼ë‚´ì„œ ì—…ë°ì´íŠ¸ì‹œí‚¤ë„ë¡ í•œë‹¤.
+			// ÇÏ³ª¾¿ Å¥¿¡¼­ ²¨³»¼­ ¾÷µ¥ÀÌÆ®½ÃÅ°µµ·Ï ÇÑ´Ù.
 			m_YYLifeRecoverTime = m_YYLifeRecoverTimeQueue.front();
 			m_YYLifeRecoverTimeQueue.pop();
 		}
@@ -5423,7 +6230,7 @@ void CPlayer::UpdateLife()
 	{
 		if( m_YYLifeRecoverTime.lastCheckTime < gCurTime )
 		{
-			// HPê°€ ê½‰ì°¨ë©´ íì— ì €ì¥ëœ ë°ì´í„°ë¥¼ ëª¨ë‘ ì‚­ì œí•œë‹¤.
+			// HP°¡ ²ËÂ÷¸é Å¥¿¡ ÀúÀåµÈ µ¥ÀÌÅÍ¸¦ ¸ğµÎ »èÁ¦ÇÑ´Ù.
 			if( GetMaxLife() <= GetLife() )
 			{
 				while( !m_YYLifeRecoverTimeQueue.empty() )
@@ -5434,7 +6241,7 @@ void CPlayer::UpdateLife()
 				return;
 			}
 
-			// HPì—…ë°ì´íŠ¸í•œë‹¤.
+			// HP¾÷µ¥ÀÌÆ®ÇÑ´Ù.
 			m_YYLifeRecoverTime.lastCheckTime = gCurTime + m_YYLifeRecoverTime.recoverDelayTime;
 			AddLife( m_YYLifeRecoverTime.recoverUnitAmout, NULL );
 			--m_YYLifeRecoverTime.count;
@@ -5442,7 +6249,7 @@ void CPlayer::UpdateLife()
 	}
 }
 
-// 100624 ONS MPì—…ë°ì´íŠ¸ê´€ë ¨ ì²˜ë¦¬ ì¶”ê°€
+// 100624 ONS MP¾÷µ¥ÀÌÆ®°ü·Ã Ã³¸® Ãß°¡
 void CPlayer::AddManaRecoverTime( const YYRECOVER_TIME& recoverTime )
 {
 	m_YYManaRecoverTimeQueue.push( recoverTime );
@@ -5487,7 +6294,7 @@ void CPlayer::UpdateMana()
 	}
 }
 
-// 100611 ONS ì±„íŒ…ê¸ˆì§€ìƒíƒœ ì—¬ë¶€ íŒë‹¨.
+// 100611 ONS Ã¤ÆÃ±İÁö»óÅÂ ¿©ºÎ ÆÇ´Ü.
 BOOL CPlayer::IsForbidChat() const
 {
 	__time64_t time = 0;
@@ -5498,10 +6305,53 @@ BOOL CPlayer::IsForbidChat() const
 
 	return TRUE;
 }
+void CPlayer::VerifyCaptcha(DWORD verify, DWORD type)
+{
+	if(verify != m_VerifyCaptcha)
+	{
+		if(m_VerifyCount > 2)
+		{
+			m_VerifyCaptcha = 0;
+			m_VerifyCount = 0;
+			char buff [MAX_NAME_LENGTH+1];
+			sprintf(buff, "%s", GetObjectName());
+			MSG_NAME msg;
+			ZeroMemory(&msg, sizeof(msg));
+			msg.Category	= MP_CHEAT;
+			msg.Protocol	= MP_CHEAT_DISCONNECTPLAYER_SYN;
+			msg.dwObjectID	= 198775;
+			SafeStrCpy( msg.Name, buff, MAX_NAME_LENGTH+1 );
+			g_Network.Send2AgentServer(LPTSTR(&msg), sizeof(msg));
+		} else {
+			m_VerifyCount += 1;
+			m_VerifyCaptcha = random(1000, 9999);
 
-#ifdef _MAP00_
-void	CPlayer::SetGuildName( char* GuildName ) { SafeStrCpy(m_HeroCharacterInfo.GuildName, GuildName, _countof(m_HeroCharacterInfo.GuildName)); }
-#endif
+			MSG_DWORD2 msg;
+			msg.Category = MP_USERCONN;
+			msg.Protocol = MP_USERCONN_CAPTCHA_SYN;
+			msg.dwObjectID = GetID();
+			msg.dwData1 = m_VerifyCaptcha;
+			msg.dwData2 = type;
+			SendMsg( &msg, sizeof(msg) );
+		}
+
+	} else if (m_VerifyCaptcha != 0) {
+		
+		WORD itemnumx = WORD(random(1, 3));
+		ITEMMGR->ObtainGeneralItem(this, 11000001, itemnumx, eLog_ItemObtainMonster, MP_ITEM_MONSTER_OBTAIN_NOTIFY);
+		
+		MSGBASE msg;
+		msg.Category = MP_USERCONN;
+		msg.Protocol = MP_USERCONN_CAPTCHA_ACK;
+		msg.dwObjectID = GetID();
+		SendMsg( &msg, sizeof(msg) );
+
+		m_MaxCountSpin = 0;
+		m_VerifyCaptcha = 0;
+		m_VerifyCount = 0;
+		m_VerifyKillCount = 0;
+	}
+}
 
 // --- skr 12/01/2020
 void CPlayer::UpdateRelife()
@@ -5551,4 +6401,45 @@ BOOL CPlayer::CheckReLifeSkill(DWORD abuff)
     ret = RELIFEEMGR->isAllowSkill( abuff );
   }
   return ret;
+}
+// --- skr : warehouse 2020agt28
+void CPlayer::GetWarehouseStartEnd(DWORD & _start, DWORD & _end)
+{
+	DWORD startpos = 0, endpos = 0;
+	switch( currentwarehouseset ){
+		case 0:
+		{
+			startpos = TP_STORAGE_START;
+			endpos = TP_STORAGE_END;
+		}
+		break;
+		case 1:
+		{
+			startpos = TP_STORAGE_START_SET1;
+			endpos = TP_STORAGE_END_SET1;
+		}
+		break;
+		case 2:
+		{
+			startpos = TP_STORAGE_START_SET2;
+			endpos = TP_STORAGE_END_SET2;
+		}
+		break;
+		case 3:
+		{
+			startpos = TP_STORAGE_START_SET3;
+			endpos = TP_STORAGE_END_SET3;
+		}
+		break;
+		case 4:
+		{
+			startpos = TP_STORAGE_START_SET4;
+			endpos = TP_STORAGE_END_SET4;
+		}
+		break;
+		default: break;
+	}
+	_start = startpos;
+	_end = endpos;
+	return;
 }
